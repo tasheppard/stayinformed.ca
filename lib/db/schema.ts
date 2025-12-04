@@ -5,6 +5,7 @@ import { sql } from 'drizzle-orm'
 // MPs table
 export const mps = pgTable('mps', {
   id: serial('id').primaryKey(),
+  personId: varchar('person_id', { length: 50 }), // PersonId from XML, nullable initially
   fullName: varchar('full_name', { length: 255 }).notNull(),
   slug: varchar('slug', { length: 255 }).notNull().unique(),
   constituencyName: varchar('constituency_name', { length: 255 }).notNull(),
@@ -13,6 +14,9 @@ export const mps = pgTable('mps', {
   email: varchar('email', { length: 255 }),
   phone: varchar('phone', { length: 50 }),
   photoUrl: text('photo_url'),
+  isActive: boolean('is_active').default(true).notNull(),
+  status: varchar('status', { length: 50 }).default('active').notNull(),
+  photoLastModified: timestamp('photo_last_modified'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
