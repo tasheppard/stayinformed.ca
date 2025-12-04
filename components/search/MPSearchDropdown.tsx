@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Fuse from 'fuse.js'
+import { MPCard } from '@/components/ui/MPCard'
 
 interface MP {
   id: number
@@ -141,38 +142,27 @@ export function MPSearchDropdown() {
           role="listbox"
         >
           {filteredMps.map((mp, index) => (
-            <button
+            <div
               key={mp.id}
-              type="button"
-              onClick={() => handleSelectMP(mp)}
               onMouseEnter={() => setSelectedIndex(index)}
-              className={`w-full text-left px-4 py-3 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none transition-colors ${
+              className={`px-2 py-2 ${
                 index === selectedIndex ? 'bg-blue-50' : ''
               }`}
               role="option"
               aria-selected={index === selectedIndex}
             >
-              <div className="flex items-center gap-3">
-                {mp.photoUrl && (
-                  <img
-                    src={mp.photoUrl}
-                    alt=""
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">
-                    {mp.fullName}
-                  </p>
-                  <p className="text-sm text-gray-600 truncate">
-                    {mp.constituencyName}, {mp.province}
-                  </p>
-                  {mp.caucusShortName && (
-                    <p className="text-xs text-gray-500">{mp.caucusShortName}</p>
-                  )}
-                </div>
-              </div>
-            </button>
+              <MPCard
+                id={mp.id}
+                fullName={mp.fullName}
+                slug={mp.slug}
+                constituencyName={mp.constituencyName}
+                province={mp.province}
+                caucusShortName={mp.caucusShortName}
+                photoUrl={mp.photoUrl}
+                onClick={() => handleSelectMP(mp)}
+                className="border-0 shadow-none hover:shadow-sm"
+              />
+            </div>
           ))}
         </div>
       )}

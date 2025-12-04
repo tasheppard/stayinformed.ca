@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { mps } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import Image from 'next/image'
-import { MPProfileTabs } from './components/MPProfileTabs'
+import { MPProfileTabsWrapper } from './components/MPProfileTabsWrapper'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -121,7 +121,7 @@ export default async function MPProfilePage({ params }: PageProps) {
 
       {/* Tab Navigation and Content */}
       <div className="container mx-auto px-4 py-6">
-        <MPProfileTabs mpId={mp.id} slug={slug} />
+        <MPProfileTabsWrapper mpId={mp.id} slug={slug} />
       </div>
     </div>
   )
