@@ -6,3 +6,25 @@
 .env.keys
 .env.local
 .env.*.local
+.env.production
+.env.development
+.env.staging
+.env.test
+.env.production.local
+.env.development.local
+.env.staging.local
+.env.test.local
+
+
+#cursor rules
+.cursor/rules
+
+#tasks
+tasks/
+
+#logs
+logs/
+
+#scripts
+scripts/
+

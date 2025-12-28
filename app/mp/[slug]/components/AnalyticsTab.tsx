@@ -32,6 +32,14 @@ interface Committee {
   meetingCount: number
 }
 
+interface ComparisonStats {
+  votingParticipationRate: number
+  billsPerMP: number
+  petitionsPerMP: number
+  committeesPerMP: number
+  committeeMeetingsPerMP: number
+}
+
 interface AnalyticsTabProps {
   mpId: number
   slug: string
@@ -39,6 +47,8 @@ interface AnalyticsTabProps {
   bills: Bill[]
   petitions: Petition[]
   committees: Committee[]
+  partyAverages?: ComparisonStats | null
+  nationalAverages?: ComparisonStats
 }
 
 export function AnalyticsTab({
@@ -48,6 +58,8 @@ export function AnalyticsTab({
   bills,
   petitions,
   committees,
+  partyAverages,
+  nationalAverages,
 }: AnalyticsTabProps) {
   // Calculate voting participation rate over time (monthly)
   const votingParticipationData = useMemo(() => {
@@ -172,6 +184,158 @@ export function AnalyticsTab({
             yAxisWidth={60}
             className="h-64"
           />
+        </div>
+      )}
+
+      {/* Comparison Visualizations */}
+      {(partyAverages || nationalAverages) && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4">
+            Performance Comparison
+          </h2>
+          <p className="text-sm text-gray-600 mb-6">
+            Compare this MP's performance to party and national averages
+          </p>
+
+          {/* Voting Participation Comparison */}
+          {nationalAverages && (
+            <div className="mb-8">
+              <h3 className="text-lg font-medium mb-4">
+                Voting Participation Rate
+              </h3>
+              <BarChart
+                data={[
+                  {
+                    Metric: 'This MP',
+                    'Participation Rate': stats.participationRate,
+                  },
+                  ...(partyAverages
+                    ? [
+                        {
+                          Metric: 'Party Average',
+                          'Participation Rate':
+                            partyAverages.votingParticipationRate,
+                        },
+                      ]
+                    : []),
+                  {
+                    Metric: 'National Average',
+                    'Participation Rate':
+                      nationalAverages.votingParticipationRate,
+                  },
+                ]}
+                index="Metric"
+                categories={['Participation Rate']}
+                colors={['blue']}
+                valueFormatter={(value) => `${value}%`}
+                yAxisWidth={60}
+                className="h-64"
+              />
+            </div>
+          )}
+
+          {/* Bills Sponsored Comparison */}
+          {nationalAverages && (
+            <div className="mb-8">
+              <h3 className="text-lg font-medium mb-4">Bills Sponsored</h3>
+              <BarChart
+                data={[
+                  {
+                    Metric: 'This MP',
+                    'Bills Sponsored': stats.billsSponsored,
+                  },
+                  ...(partyAverages
+                    ? [
+                        {
+                          Metric: 'Party Average',
+                          'Bills Sponsored': partyAverages.billsPerMP,
+                        },
+                      ]
+                    : []),
+                  {
+                    Metric: 'National Average',
+                    'Bills Sponsored': nationalAverages.billsPerMP,
+                  },
+                ]}
+                index="Metric"
+                categories={['Bills Sponsored']}
+                colors={['green']}
+                valueFormatter={(value) => `${value}`}
+                yAxisWidth={60}
+                className="h-64"
+              />
+            </div>
+          )}
+
+          {/* Petitions Sponsored Comparison */}
+          {nationalAverages && (
+            <div className="mb-8">
+              <h3 className="text-lg font-medium mb-4">
+                Petitions Sponsored
+              </h3>
+              <BarChart
+                data={[
+                  {
+                    Metric: 'This MP',
+                    'Petitions Sponsored': stats.petitionsSponsored,
+                  },
+                  ...(partyAverages
+                    ? [
+                        {
+                          Metric: 'Party Average',
+                          'Petitions Sponsored': partyAverages.petitionsPerMP,
+                        },
+                      ]
+                    : []),
+                  {
+                    Metric: 'National Average',
+                    'Petitions Sponsored': nationalAverages.petitionsPerMP,
+                  },
+                ]}
+                index="Metric"
+                categories={['Petitions Sponsored']}
+                colors={['purple']}
+                valueFormatter={(value) => `${value}`}
+                yAxisWidth={60}
+                className="h-64"
+              />
+            </div>
+          )}
+
+          {/* Committee Participation Comparison */}
+          {nationalAverages && (
+            <div>
+              <h3 className="text-lg font-medium mb-4">
+                Committee Participation
+              </h3>
+              <BarChart
+                data={[
+                  {
+                    Metric: 'This MP',
+                    'Committees': stats.committeesCount,
+                  },
+                  ...(partyAverages
+                    ? [
+                        {
+                          Metric: 'Party Average',
+                          'Committees': partyAverages.committeesPerMP,
+                        },
+                      ]
+                    : []),
+                  {
+                    Metric: 'National Average',
+                    'Committees': nationalAverages.committeesPerMP,
+                  },
+                ]}
+                index="Metric"
+                categories={['Committees']}
+                colors={['orange']}
+                valueFormatter={(value) => `${value}`}
+                yAxisWidth={60}
+                className="h-64"
+              />
+            </div>
+          )}
         </div>
       )}
 

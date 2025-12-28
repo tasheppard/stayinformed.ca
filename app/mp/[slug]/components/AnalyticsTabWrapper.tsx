@@ -1,7 +1,17 @@
 import { db } from '@/lib/db'
-import { votes, bills, petitions, committeeParticipation } from '@/lib/db/schema'
+import {
+  votes,
+  bills,
+  petitions,
+  committeeParticipation,
+  mps,
+} from '@/lib/db/schema'
 import { eq, desc, isNotNull } from 'drizzle-orm'
 import { AnalyticsTab } from './AnalyticsTab'
+import {
+  calculatePartyAverages,
+  calculateNationalAverages,
+} from '@/lib/utils/comparisons'
 
 interface AnalyticsTabWrapperProps {
   mpId: number
@@ -12,33 +22,57 @@ export async function AnalyticsTabWrapper({
   mpId,
   slug,
 }: AnalyticsTabWrapperProps) {
-  // Fetch all votes for this MP
-  const allVotes = await db
-    .select()
-    .from(votes)
-    .where(eq(votes.mpId, mpId))
-    .orderBy(desc(votes.date))
+  // Fetch MP data to get party information
+  const mpData = await db
+    .select({ caucusShortName: mps.caucusShortName })
+    .from(mps)
+    .where(eq(mps.id, mpId))
+    .limit(1)
+    .then((results) => results[0])
 
-  // Fetch bills sponsored by this MP
-  const allBills = await db
-    .select()
-    .from(bills)
-    .where(eq(bills.sponsorMpId, mpId))
-    .orderBy(desc(bills.introductionDate))
+  // Fetch all data and calculate comparisons in parallel
+  const [
+    allVotes,
+    allBills,
+    allPetitions,
+    allCommittees,
+    partyAverages,
+    nationalAverages,
+  ] = await Promise.all([
+    // Fetch all votes for this MP
+    db
+      .select()
+      .from(votes)
+      .where(eq(votes.mpId, mpId))
+      .orderBy(desc(votes.date)),
 
-  // Fetch petitions sponsored by this MP
-  const allPetitions = await db
-    .select()
-    .from(petitions)
-    .where(eq(petitions.sponsorMpId, mpId))
-    .orderBy(desc(petitions.presentedDate))
+    // Fetch bills sponsored by this MP
+    db
+      .select()
+      .from(bills)
+      .where(eq(bills.sponsorMpId, mpId))
+      .orderBy(desc(bills.introductionDate)),
 
-  // Fetch committee participation for this MP
-  const allCommittees = await db
-    .select()
-    .from(committeeParticipation)
-    .where(eq(committeeParticipation.mpId, mpId))
-    .orderBy(desc(committeeParticipation.startDate))
+    // Fetch petitions sponsored by this MP
+    db
+      .select()
+      .from(petitions)
+      .where(eq(petitions.sponsorMpId, mpId))
+      .orderBy(desc(petitions.presentedDate)),
+
+    // Fetch committee participation for this MP
+    db
+      .select()
+      .from(committeeParticipation)
+      .where(eq(committeeParticipation.mpId, mpId))
+      .orderBy(desc(committeeParticipation.startDate)),
+
+    // Calculate party averages
+    calculatePartyAverages(mpData?.caucusShortName || null),
+
+    // Calculate national averages
+    calculateNationalAverages(),
+  ])
 
   return (
     <AnalyticsTab
@@ -48,6 +82,8 @@ export async function AnalyticsTabWrapper({
       bills={allBills}
       petitions={allPetitions}
       committees={allCommittees}
+      partyAverages={partyAverages}
+      nationalAverages={nationalAverages}
     />
   )
 }

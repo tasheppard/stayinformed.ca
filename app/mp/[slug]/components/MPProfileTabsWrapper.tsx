@@ -10,6 +10,10 @@ import {
 } from '@/lib/db/schema'
 import { eq, desc, and, gte, isNotNull } from 'drizzle-orm'
 import { MPProfileTabs } from './MPProfileTabs'
+import {
+  calculatePartyAverages,
+  calculateNationalAverages,
+} from '@/lib/utils/comparisons'
 
 interface MPProfileTabsWrapperProps {
   mpId: number
@@ -118,9 +122,15 @@ export async function MPProfileTabsWrapper({
     })
     .slice(0, 5)
 
-  // TODO: Calculate party and national averages for expenses
-  const partyAverage = undefined
-  const nationalAverage = undefined
+  // Calculate party and national averages for expenses and analytics
+  const [partyAverages, nationalAverages] = await Promise.all([
+    calculatePartyAverages(mpData?.caucusShortName || null),
+    calculateNationalAverages(),
+  ])
+
+  // Calculate expense averages (for Expenses tab)
+  const partyAverage = undefined // TODO: Calculate expense averages
+  const nationalAverage = undefined // TODO: Calculate expense averages
 
   return (
     <MPProfileTabs
@@ -139,6 +149,8 @@ export async function MPProfileTabsWrapper({
       recentPetitions={recentPetitions}
       partyAverage={partyAverage}
       nationalAverage={nationalAverage}
+      partyAverages={partyAverages}
+      nationalAverages={nationalAverages}
     />
   )
 }

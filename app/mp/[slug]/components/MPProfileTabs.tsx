@@ -6,6 +6,14 @@ import { VotingRecordTab } from './VotingRecordTab'
 import { ExpensesTab } from './ExpensesTab'
 import { AnalyticsTab } from './AnalyticsTab'
 
+interface ComparisonStats {
+  votingParticipationRate: number
+  billsPerMP: number
+  petitionsPerMP: number
+  committeesPerMP: number
+  committeeMeetingsPerMP: number
+}
+
 interface MPProfileTabsProps {
   mpId: number
   slug: string
@@ -22,6 +30,8 @@ interface MPProfileTabsProps {
   recentPetitions: any[]
   partyAverage?: number
   nationalAverage?: number
+  partyAverages?: ComparisonStats | null
+  nationalAverages?: ComparisonStats
 }
 
 export function MPProfileTabs({
@@ -40,6 +50,8 @@ export function MPProfileTabs({
   recentPetitions,
   partyAverage,
   nationalAverage,
+  partyAverages,
+  nationalAverages,
 }: MPProfileTabsProps) {
   return (
     <Tabs.Root defaultValue="overview" className="w-full">
@@ -161,6 +173,8 @@ export function MPProfileTabs({
           bills={bills}
           petitions={petitions}
           committees={committees}
+          partyAverages={partyAverages}
+          nationalAverages={nationalAverages}
         />
       </Tabs.Content>
     </Tabs.Root>
