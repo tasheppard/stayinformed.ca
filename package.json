@@ -28,7 +28,8 @@
     "db:import-boundaries-node": "tsx lib/db/import-boundaries-stream.ts",
     "worker:setup": "tsx lib/workers/setup.ts",
     "worker:start": "tsx workers/worker.ts",
-    "worker:schedule": "tsx lib/workers/schedule-jobs.ts"
+    "worker:schedule": "tsx lib/workers/schedule-jobs.ts",
+    "scan:secrets": "tsx scripts/scan-secrets.ts"
   },
   "repository": {
     "type": "git",

@@ -43,3 +43,23 @@ data/shapefiles/*
 data/geojson/*
 !data/.gitkeep
 
+# private/internal files (keeping private for now)
+docs/
+tasks/
+lib/scrapers/
+lib/utils/comparisons.ts
+.cursor/rules
+
+# API keys and secrets (ensure these are never committed)
+*.key
+*.pem
+secrets/
+.secrets/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
