@@ -28,7 +28,14 @@
     "db:import-boundaries-node": "tsx lib/db/import-boundaries-stream.ts",
     "worker:setup": "tsx lib/workers/setup.ts",
     "worker:start": "tsx workers/worker.ts",
-    "worker:schedule": "tsx lib/workers/schedule-jobs.ts"
+    "worker:schedule": "tsx lib/workers/schedule-jobs.ts",
+    "scrape:mp-list": "tsx scripts/scrape-mp-list.ts",
+    "db:view-mps": "tsx scripts/view-mps.ts",
+    "db:check-schema": "tsx scripts/check-db-schema.ts",
+    "db:migrate:phase3": "tsx scripts/run-phase3-migration.ts",
+    "db:migrate:production": "tsx scripts/migrate-production.ts",
+    "db:migrate:phase3:production": "tsx scripts/run-phase3-production.ts",
+    "db:psql": "bash scripts/psql-production.sh"
   },
   "repository": {
     "type": "git",
