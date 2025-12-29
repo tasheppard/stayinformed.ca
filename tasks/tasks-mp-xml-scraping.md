@@ -63,7 +63,7 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 1.8 Run Phase 3 migration only after confirming 100% backfill is complete
   - [x] 1.9 Verify all migrations ran successfully and database schema is correct
 
-- [ ] 2.0 Utility Functions & Helpers
+- [x] 2.0 Utility Functions & Helpers
   - [x] 2.1 Create `lib/utils/mp-url-helper.ts` with `generateMpUrlSlug(firstName, lastName, personId)` function:
     - Replace spaces with hyphens in both first and last names
     - Handle special characters (e.g., "Yves-François Blanchet", "Xavier Barsalou-Duval")
@@ -86,7 +86,7 @@ Update the file after completing each sub-task, not just after completing an ent
     - Title casing various input formats
     - Sanitizing whitespace
     - Handling edge cases
-  - [ ] 2.5 Run all utility function tests to ensure they pass
+  - [x] 2.5 Run all utility function tests to ensure they pass
 
 - [ ] 3.0 MPListScraper Implementation
   - [x] 3.1 Create `lib/scrapers/mp-list-scraper.ts` that extends `BaseScraper<MPListData>`

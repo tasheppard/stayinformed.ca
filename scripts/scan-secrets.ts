@@ -171,6 +171,19 @@ function main() {
     process.exit(0)
   }
   
+  // Check for jest.config.js - this conflicts with jest.config.cjs
+  const jestConfigJs = stagedFiles.find(f => f === 'jest.config.js')
+  if (jestConfigJs) {
+    console.error('\n❌ BLOCKED: jest.config.js detected in staged files!\n')
+    console.error('   jest.config.js conflicts with jest.config.cjs and will cause Jest to fail.')
+    console.error('   This project uses jest.config.cjs for ESM support.')
+    console.error('\n   To fix:')
+    console.error('   1. Remove jest.config.js: git rm --cached jest.config.js')
+    console.error('   2. Ensure jest.config.js is in .gitignore')
+    console.error('   3. Only jest.config.cjs should be committed\n')
+    process.exit(1)
+  }
+  
   const allMatches: SecretMatch[] = []
   
   for (const file of stagedFiles) {

@@ -141,6 +141,9 @@ describe('validateMpUrlSlug', () => {
     expect(validateMpUrlSlug('John-Smith()')).toBe(false) // Empty personId
     expect(validateMpUrlSlug('John-Smith(123-45)')).toBe(false) // Hyphen in personId
     expect(validateMpUrlSlug('John@Smith(12345)')).toBe(false) // Invalid character
+    expect(validateMpUrlSlug('John(invalid)-Smith(12345)')).toBe(false) // Parentheses in name part
+    expect(validateMpUrlSlug('(bad)(12345)')).toBe(false) // Parentheses at start
+    expect(validateMpUrlSlug('John-(test)-Smith(12345)')).toBe(false) // Parentheses in middle
   })
 
   it('should handle edge cases', () => {
