@@ -181,7 +181,12 @@ Update the file after completing each sub-task, not just after completing an ent
     - Verify bucket configuration
     - Note: Created setup script `scripts/setup-storage-bucket.ts`
     - Run with: `npm run setup:storage` or `tsx scripts/setup-storage-bucket.ts`
-    - CORS settings must be configured manually via Supabase Dashboard (Storage > Settings > CORS Configuration)
+    - CORS Configuration:
+      - For LOCAL development: CORS is usually NOT needed (everything on localhost)
+      - For PRODUCTION: Public Supabase Storage buckets handle CORS automatically
+      - No dashboard configuration needed - public buckets work with browser requests
+      - If custom CORS headers are needed, use Edge Functions or a proxy/CDN
+      - Note: Server-side uploads (photo-storage.ts) don't need CORS
   - [x] 5.2 Create `lib/storage/photo-storage.ts` service with functions to:
     - Download photo from URL (XML or HTML source)
     - Check HTTP headers (`Last-Modified` or `ETag`) or compare image hash
@@ -205,11 +210,12 @@ Update the file after completing each sub-task, not just after completing an ent
     - Image resizing and compression
     - Supabase Storage upload
     - Error handling
-  - [ ] 5.5 Run tests to ensure photo storage works correctly
+  - [x] 5.5 Run tests to ensure photo storage works correctly
     - Note: Tests are ready in `lib/storage/photo-storage.test.ts` with comprehensive coverage
     - Before running tests, ensure `sharp` package is installed: `npm install sharp`
     - Run tests with: `npx jest lib/storage/photo-storage.test.ts`
     - Tests cover: photo download, conditional download logic, image resizing/compression, Supabase upload, error handling
+    - All 16 tests passing successfully
   - [ ] 5.6 Test photo storage integration with a sample MP
 
 - [ ] 6.0 Update Existing Scrapers for PersonId Matching
