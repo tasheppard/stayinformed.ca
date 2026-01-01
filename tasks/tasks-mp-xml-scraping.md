@@ -216,7 +216,30 @@ Update the file after completing each sub-task, not just after completing an ent
     - Run tests with: `npx jest lib/storage/photo-storage.test.ts`
     - Tests cover: photo download, conditional download logic, image resizing/compression, Supabase upload, error handling
     - All 16 tests passing successfully
-  - [ ] 5.6 Test photo storage integration with a sample MP
+  - [x] 5.6 Test photo storage integration with a sample MP
+    - Note: Created test script `scripts/test-photo-storage.ts`
+    - Run with: `npm run test:photo-storage` or `tsx scripts/test-photo-storage.ts [personId]`
+    - Script will:
+      - Find a sample MP with a photo URL (or use provided personId)
+      - Test photo download, processing, and upload to Supabase Storage
+      - Verify public URL generation
+      - Display results and any errors
+    - Requires: DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+    - Note: ✅ Script tested successfully! Photo URLs populated for all 343 MPs
+    - Note: Photo URLs generated using pattern: `[LastName][FirstName]_[PartyCode].jpg`
+    - Note: Photo storage integration working: download → process → upload → public URL
+  - [x] 5.7 Populate photo URLs for existing MPs
+    - Note: Created script `scripts/populate-photo-urls.ts` to generate photo URLs
+    - Run with: `npm run populate:photo-urls`
+    - Script generates URLs using pattern: `https://www.ourcommons.ca/Content/Parliamentarians/Images/OfficialMPPhotos/45/[LastName][FirstName]_[PartyCode].jpg`
+    - Party code mapping:
+      * Liberal → Lib
+      * Conservative → CPC
+      * Ndp → NDP
+      * Bloc Québécois → BQ
+      * Green Party → GP
+      * Unknown/Missing → Ind
+    - ✅ Successfully populated photo URLs for all 343 active MPs
 
 - [ ] 6.0 Update Existing Scrapers for PersonId Matching
   - [ ] 6.1 Update `lib/scrapers/votes-scraper.ts`:

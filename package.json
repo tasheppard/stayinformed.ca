@@ -37,7 +37,12 @@
     "db:migrate:phase3": "tsx scripts/run-phase3-migration.ts",
     "db:migrate:production": "tsx scripts/migrate-production.ts",
     "db:migrate:phase3:production": "tsx scripts/run-phase3-production.ts",
-    "db:psql": "bash scripts/psql-production.sh"
+    "db:mark-migrations": "tsx scripts/mark-migrations-applied.ts",
+    "db:backfill-personid:production": "NODE_ENV=production tsx scripts/backfill-personid-production.ts",
+    "db:migrate-data:production": "tsx scripts/migrate-data-to-production.ts",
+    "db:psql": "bash scripts/psql-production.sh",
+    "test:photo-storage": "tsx scripts/test-photo-storage.ts",
+    "populate:photo-urls": "tsx scripts/populate-photo-urls.ts"
   },
   "repository": {
     "type": "git",
