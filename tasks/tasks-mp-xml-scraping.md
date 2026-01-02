@@ -297,7 +297,15 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 8.4 Test full integration: Run MPListScraper, then MPDetailScraper
   - [ ] 8.5 Verify soft delete functionality (test with mock data)
   - [ ] 8.6 Verify photo storage integration end-to-end
-  - [ ] 8.7 Test PersonId matching in updated scrapers
+  - [x] 8.7 Test PersonId matching in updated scrapers
+    - ✅ Created comprehensive test files for all scrapers:
+      - `lib/scrapers/votes-scraper.test.ts` - 8 tests (all passing)
+      - `lib/scrapers/expenses-scraper.test.ts` - 6 tests (all passing)
+      - `lib/scrapers/bills-scraper.test.ts` - 7 tests (all passing)
+      - `lib/scrapers/petitions-scraper.test.ts` - 8 tests (all passing)
+      - `lib/scrapers/committees-scraper.test.ts` - 7 tests (all passing)
+    - ✅ All tests cover PersonId matching, name fallback, and error handling scenarios
+    - ✅ Fixed database mocking issues to properly handle Drizzle ORM query builder chain
   - [ ] 8.8 Test error handling and retry logic
   - [ ] 8.9 Test rate limiting (verify 1 request per second)
   - [ ] 8.10 Update README or create documentation for:
