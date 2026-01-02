@@ -270,23 +270,26 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 6.7 Verify backward compatibility (handle cases where personId might be null during transition)
     - Note: All scrapers implement backward compatibility by falling back to name matching when PersonId is not available or not found in the database.
 
-- [ ] 7.0 Job Scheduling & Graphile Worker Integration
-  - [ ] 7.1 Add `scrapeMPList` job function to `workers/scraper-jobs.ts`:
+- [x] 7.0 Job Scheduling & Graphile Worker Integration
+  - [x] 7.1 Add `scrapeMPList` job function to `workers/scraper-jobs.ts`:
     - Create async function that instantiates `MPListScraper`
     - Call `scraper.run()` and handle results
     - Log success/failure
     - Send errors to Sentry
-  - [ ] 7.2 Add `scrapeMPDetails` job function to `workers/scraper-jobs.ts`:
+    - Note: After successful completion, schedules `scrapeMPDetails` to ensure sequencing
+  - [x] 7.2 Add `scrapeMPDetails` job function to `workers/scraper-jobs.ts`:
     - Create async function that instantiates `MPDetailScraper`
     - Call `scraper.run()` and handle results
     - Log success/failure
     - Send errors to Sentry
-  - [ ] 7.3 Export both new job functions in the `taskList` object in `workers/scraper-jobs.ts`
-  - [ ] 7.4 Update `lib/workers/schedule-jobs.ts` to schedule:
+  - [x] 7.3 Export both new job functions in the `taskList` object in `workers/scraper-jobs.ts`
+  - [x] 7.4 Update `lib/workers/schedule-jobs.ts` to schedule:
     - `scrapeMPList` job: Daily at 1 AM EST (configurable via `MP_LIST_SCRAPER_SCHEDULE` env var)
     - `scrapeMPDetails` job: Daily at 2 AM EST (configurable via `MP_DETAIL_SCRAPER_SCHEDULE` env var)
     - Use job keys: `scrape-mp-list-daily` and `scrape-mp-details-daily` for idempotency
     - Ensure `scrapeMPList` runs before `scrapeMPDetails`
+    - Note: Created `workers/worker.ts` to run the Graphile Worker with task list
+    - Note: `scrapeMPList` automatically schedules `scrapeMPDetails` after completion for proper sequencing
   - [ ] 7.5 Test job scheduling locally
   - [ ] 7.6 Verify job sequencing (MPListScraper must complete before MPDetailScraper starts)
 
