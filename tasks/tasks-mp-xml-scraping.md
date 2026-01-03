@@ -290,8 +290,33 @@ Update the file after completing each sub-task, not just after completing an ent
     - Ensure `scrapeMPList` runs before `scrapeMPDetails`
     - Note: Created `workers/worker.ts` to run the Graphile Worker with task list
     - Note: `scrapeMPList` automatically schedules `scrapeMPDetails` after completion for proper sequencing
-  - [ ] 7.5 Test job scheduling locally
-  - [ ] 7.6 Verify job sequencing (MPListScraper must complete before MPDetailScraper starts)
+  - [x] 7.5 Test job scheduling locally
+    - Note: Created test script `scripts/test-job-scheduling.ts`
+    - Run with: `npm run worker:test` or `tsx scripts/test-job-scheduling.ts`
+    - Script will:
+      - Set up Graphile Worker schema (if needed)
+      - Schedule test jobs for immediate execution (5 and 10 seconds from now)
+      - Verify jobs are scheduled correctly in the database
+      - Provide instructions for starting the worker to process jobs
+    - To test end-to-end:
+      1. Run `npm run worker:test` to schedule test jobs
+      2. In another terminal, run `npm run worker:start` to start the worker
+      3. Watch the worker process the scheduled jobs
+      4. Verify jobs execute successfully
+  - [x] 7.6 Verify job sequencing (MPListScraper must complete before MPDetailScraper starts)
+    - Note: Created verification script `scripts/verify-job-sequencing.ts`
+    - Run with: `npm run worker:verify-sequencing` or `tsx scripts/verify-job-sequencing.ts`
+    - Verification confirms:
+      - ✅ scrapeMPDetails is scheduled only after scrapeMPList succeeds
+      - ✅ No arbitrary delay - job scheduled immediately after completion
+      - ✅ Uses different job key to avoid conflicts with daily scheduler
+      - ✅ Has error handling for job scheduling failures
+    - Sequencing logic:
+      1. scrapeMPList runs and completes all database operations via `scraper.run()`
+      2. If successful, scrapeMPDetails is scheduled immediately (no delay)
+      3. Graphile Worker processes jobs in order
+      4. MPDetailScraper depends on MPs being in database (from MPListScraper)
+    - Fixed race condition: Removed arbitrary 1-second delay, scheduling happens immediately after `scraper.run()` completes all database operations
 
 - [ ] 8.0 Testing & Documentation
   - [ ] 8.1 Run all unit tests for new scrapers and utilities

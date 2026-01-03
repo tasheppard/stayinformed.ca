@@ -9,13 +9,75 @@ if (!process.env.DATABASE_URL) {
 }
 
 /**
+ * Determine the timezone offset for Eastern Time (Canada/US) based on DST
+ * 
+ * DST rules for Eastern Time:
+ * - DST starts: Second Sunday in March at 2:00 AM local time
+ * - DST ends: First Sunday in November at 2:00 AM local time
+ * - During DST: EDT (UTC-4)
+ * - During standard time: EST (UTC-5)
+ * 
+ * @param date The date to check (defaults to current date)
+ * @returns The timezone offset in hours (-4 for EDT, -5 for EST)
+ */
+function getEasternTimeOffset(date: Date = new Date()): number {
+  // Check if timezone offset is explicitly configured
+  const configuredOffset = process.env.TIMEZONE_OFFSET
+  if (configuredOffset) {
+    const offset = parseInt(configuredOffset, 10)
+    if (!isNaN(offset)) {
+      return offset
+    }
+  }
+
+  const year = date.getUTCFullYear()
+  
+  // Find second Sunday in March (DST start)
+  // DST starts at 2:00 AM local time on the second Sunday in March
+  // March 1st is the starting point
+  const march1 = new Date(Date.UTC(year, 2, 1)) // March 1
+  const march1Day = march1.getUTCDay() // 0 = Sunday, 1 = Monday, etc.
+  
+  // Calculate days to first Sunday in March
+  // If March 1 is Sunday (0), first Sunday is March 1 (0 days)
+  // If March 1 is Monday (1), first Sunday is March 7 (6 days)
+  // Formula: (7 - march1Day) % 7
+  const daysToFirstSunday = (7 - march1Day) % 7
+  // Second Sunday is 7 days after first Sunday
+  const daysToSecondSunday = daysToFirstSunday + 7
+  // DST starts at 2:00 AM local time
+  // At that moment, we're still in EST (UTC-5), so 2:00 AM EST = 7:00 AM UTC
+  const dstStart = new Date(Date.UTC(year, 2, 1 + daysToSecondSunday, 7, 0, 0, 0))
+  
+  // Find first Sunday in November (DST end)
+  // DST ends at 2:00 AM local time on the first Sunday in November
+  const november1 = new Date(Date.UTC(year, 10, 1)) // November 1
+  const november1Day = november1.getUTCDay()
+  // Calculate days to first Sunday in November
+  const daysToFirstSundayNov = (7 - november1Day) % 7
+  // DST ends at 2:00 AM local time
+  // At that moment, we're still in EDT (UTC-4), so 2:00 AM EDT = 6:00 AM UTC
+  const dstEnd = new Date(Date.UTC(year, 10, 1 + daysToFirstSundayNov, 6, 0, 0, 0))
+  
+  // Check if date is during DST period
+  // DST is in effect from second Sunday in March to first Sunday in November
+  if (date >= dstStart && date < dstEnd) {
+    return -4 // EDT (UTC-4)
+  }
+  
+  return -5 // EST (UTC-5)
+}
+
+/**
  * Calculate next run time based on cron-like schedule
  * Simple implementation: expects format "HH MM" (24-hour format)
  * Example: "01 00" = 1:00 AM, "02 00" = 2:00 AM
  * 
- * For EST: 1 AM EST = 6 AM UTC, 2 AM EST = 7 AM UTC
+ * Automatically handles DST for Eastern Time (EST/EDT)
  */
-function getNextRunTime(schedule: string, timezoneOffset: number = -5): Date {
+function getNextRunTime(schedule: string, timezoneOffset?: number): Date {
+  // Use provided offset or determine dynamically based on DST
+  const offset = timezoneOffset ?? getEasternTimeOffset()
   const parts = schedule.trim().split(/\s+/)
   if (parts.length < 2) {
     throw new Error(`Invalid schedule format: ${schedule}. Expected "HH MM" (24-hour format)`)
@@ -31,44 +93,59 @@ function getNextRunTime(schedule: string, timezoneOffset: number = -5): Date {
     throw new Error(`Invalid minute in schedule: ${minute}`)
   }
 
-  // Convert local time to UTC
-  // timezoneOffset: negative for timezones behind UTC (e.g., EST = -5), positive for ahead
-  let utcHour = hour - timezoneOffset
-  const utcMinute = minute
-
-  // Normalize hour to 0-23 range and adjust date accordingly
-  let dateAdjustment = 0
-  if (utcHour >= 24) {
-    // Hour overflow: move to next day(s)
-    // Example: 25 hours = 1 AM next day
-    dateAdjustment = Math.floor(utcHour / 24)
-    utcHour = utcHour % 24
-  } else if (utcHour < 0) {
-    // Hour underflow: move to previous day(s)
-    // Example: -4 hours = 8 PM previous day (20:00)
-    // Math.floor for negative numbers gives us the correct day adjustment
-    dateAdjustment = Math.floor(utcHour / 24)
-    // Convert to positive hour: subtract the day adjustment (which is negative)
-    utcHour = utcHour - (dateAdjustment * 24)
-  }
-
+  // Work with local time first, then convert to UTC
+  // This avoids date adjustment issues when local date differs from UTC date
   const now = new Date()
-  const nextRun = new Date()
   
-  // Set UTC time with normalized hour
-  nextRun.setUTCHours(utcHour, utcMinute, 0, 0)
+  // Step 1: Get current local time (for the target timezone)
+  // offset is in hours: negative for behind UTC (EST = -5, EDT = -4), positive for ahead
+  // To get local time from UTC, add the offset (local is behind UTC, so we add)
+  const nowLocalMs = now.getTime() + (offset * 60 * 60 * 1000)
+  const nowLocal = new Date(nowLocalMs)
   
-  // Apply date adjustment from hour overflow/underflow
-  if (dateAdjustment !== 0) {
-    nextRun.setUTCDate(nextRun.getUTCDate() + dateAdjustment)
+  // Step 2: Extract local date components (year, month, day)
+  const localYear = nowLocal.getUTCFullYear()
+  const localMonth = nowLocal.getUTCMonth()
+  const localDay = nowLocal.getUTCDate()
+  
+  // Step 3: Create a date representing the scheduled time in local timezone
+  // We'll create it as if it were UTC, then adjust
+  // Create midnight of the local date in "local timezone" (represented as UTC)
+  const localMidnight = new Date(Date.UTC(localYear, localMonth, localDay, 0, 0, 0, 0))
+  // Add the scheduled hours/minutes in local time
+  const localScheduled = new Date(localMidnight.getTime() + (hour * 60 * 60 * 1000) + (minute * 60 * 1000))
+  
+  // Step 4: Convert local scheduled time to UTC
+  // To convert local to UTC, subtract the offset (UTC is ahead of local)
+  // Note: We need to use the offset for the target date, not necessarily today
+  // For simplicity, we'll use today's offset and recalculate if needed for tomorrow
+  const todayUtc = new Date(localScheduled.getTime() - (offset * 60 * 60 * 1000))
+  
+  // Step 5: Check if this time has already passed (compare in local time)
+  // Convert todayUtc back to local time for comparison
+  const todayLocalMs = todayUtc.getTime() + (offset * 60 * 60 * 1000)
+  
+  if (todayLocalMs <= nowLocalMs) {
+    // Schedule for tomorrow in local time
+    const tomorrowLocal = new Date(nowLocalMs + (24 * 60 * 60 * 1000))
+    const tomorrowYear = tomorrowLocal.getUTCFullYear()
+    const tomorrowMonth = tomorrowLocal.getUTCMonth()
+    const tomorrowDay = tomorrowLocal.getUTCDate()
+    
+    // Get offset for tomorrow (in case DST changes overnight)
+    const tomorrowDate = new Date(Date.UTC(tomorrowYear, tomorrowMonth, tomorrowDay, 12, 0, 0, 0))
+    const tomorrowOffset = timezoneOffset ?? getEasternTimeOffset(tomorrowDate)
+    
+    // Create midnight of tomorrow's local date
+    const tomorrowLocalMidnight = new Date(Date.UTC(tomorrowYear, tomorrowMonth, tomorrowDay, 0, 0, 0, 0))
+    // Add the scheduled hours/minutes in local time
+    const tomorrowLocalScheduled = new Date(tomorrowLocalMidnight.getTime() + (hour * 60 * 60 * 1000) + (minute * 60 * 1000))
+    // Convert to UTC using tomorrow's offset
+    const nextRun = new Date(tomorrowLocalScheduled.getTime() - (tomorrowOffset * 60 * 60 * 1000))
+    return nextRun
   }
-
-  // If the time has already passed today, schedule for tomorrow
-  if (nextRun <= now) {
-    nextRun.setUTCDate(nextRun.getUTCDate() + 1)
-  }
-
-  return nextRun
+  
+  return todayUtc
 }
 
 /**
@@ -97,15 +174,16 @@ export async function scheduleJobs(): Promise<void> {
   })
 
   try {
-    // Default schedules (1 AM and 2 AM EST)
+    // Default schedules (1 AM and 2 AM Eastern Time)
     // Format: "HH MM" (24-hour format)
-    // EST is UTC-5, so we'll convert in getNextRunTime
-    const mpListSchedule = process.env.MP_LIST_SCRAPER_SCHEDULE || '01 00' // 1 AM EST
-    const mpDetailsSchedule = process.env.MP_DETAIL_SCRAPER_SCHEDULE || '02 00' // 2 AM EST
+    // Automatically handles DST: EST (UTC-5) or EDT (UTC-4)
+    const mpListSchedule = process.env.MP_LIST_SCRAPER_SCHEDULE || '01 00' // 1 AM Eastern Time
+    const mpDetailsSchedule = process.env.MP_DETAIL_SCRAPER_SCHEDULE || '02 00' // 2 AM Eastern Time
 
-    // Calculate next run times (EST timezone, UTC-5)
-    const mpListNextRun = getNextRunTime(mpListSchedule, -5)
-    const mpDetailsNextRun = getNextRunTime(mpDetailsSchedule, -5)
+    // Calculate next run times (automatically handles EST/EDT based on DST)
+    // getNextRunTime will determine the correct offset based on the current date
+    const mpListNextRun = getNextRunTime(mpListSchedule)
+    const mpDetailsNextRun = getNextRunTime(mpDetailsSchedule)
 
     // Schedule scrapeMPList job
     // Job key ensures idempotency - only one job will be scheduled per key
@@ -119,8 +197,12 @@ export async function scheduleJobs(): Promise<void> {
       }
     )
 
+    // Determine timezone label for display
+    const currentOffset = getEasternTimeOffset()
+    const timezoneLabel = currentOffset === -4 ? 'EDT' : 'EST'
+    
     console.log(`✅ Scheduled scrapeMPList job (key: scrape-mp-list-daily)`)
-    console.log(`   Next run: ${mpListNextRun.toISOString()} (${mpListSchedule} EST)`)
+    console.log(`   Next run: ${mpListNextRun.toISOString()} (${mpListSchedule} ${timezoneLabel})`)
 
     // Schedule scrapeMPDetails job
     // This should run after scrapeMPList completes
@@ -136,7 +218,7 @@ export async function scheduleJobs(): Promise<void> {
     )
 
     console.log(`✅ Scheduled scrapeMPDetails job (key: scrape-mp-details-daily)`)
-    console.log(`   Next run: ${mpDetailsNextRun.toISOString()} (${mpDetailsSchedule} EST)`)
+    console.log(`   Next run: ${mpDetailsNextRun.toISOString()} (${mpDetailsSchedule} ${timezoneLabel})`)
     console.log('')
     console.log('ℹ️  Note: For production, this script should be called by:')
     console.log('   - System cron (daily)')

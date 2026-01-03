@@ -41,6 +41,7 @@ export async function scrapeMPList(payload: unknown, helpers: JobHelpers): Promi
 
       // Schedule scrapeMPDetails to run after MP list scraping completes
       // This ensures proper sequencing: MPListScraper must complete before MPDetailScraper starts
+      // Since scraper.run() completes all database operations before returning, we can schedule immediately
       // Use a different job key than the daily scheduler to avoid replacing the scheduled daily job
       try {
         await helpers.addJob(
@@ -49,10 +50,11 @@ export async function scrapeMPList(payload: unknown, helpers: JobHelpers): Promi
           {
             jobKey: 'scrape-mp-details-after-list',
             jobKeyMode: 'replace',
-            runAt: new Date(Date.now() + 1000), // Run in 1 second
+            // Schedule immediately - scraper.run() has already completed all database operations
+            // No delay needed since the database transaction is committed before this point
           }
         )
-        logger.info('Scheduled scrapeMPDetails job to run after MP list scraping')
+        logger.info('Scheduled scrapeMPDetails job to run after MP list scraping completes')
       } catch (scheduleError) {
         logger.warn('Failed to schedule scrapeMPDetails job:', scheduleError)
         // Don't fail the entire job if scheduling fails - the external scheduler will handle it

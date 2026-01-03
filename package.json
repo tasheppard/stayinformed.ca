@@ -29,6 +29,8 @@
     "worker:setup": "tsx lib/workers/setup.ts",
     "worker:start": "tsx workers/worker.ts",
     "worker:schedule": "tsx lib/workers/schedule-jobs.ts",
+    "worker:test": "tsx scripts/test-job-scheduling.ts",
+    "worker:verify-sequencing": "tsx scripts/verify-job-sequencing.ts",
     "scan:secrets": "tsx scripts/scan-secrets.ts",
     "scrape:mp-list": "tsx scripts/scrape-mp-list.ts",
     "setup:storage": "tsx scripts/setup-storage-bucket.ts",
