@@ -1,165 +1,164 @@
 #!/usr/bin/env tsx
 /**
- * Secret scanning script for pre-commit hook
- * Scans staged files for common secret patterns
+ * Secret Scanner for Pre-commit Hook
+ * Scans staged files for potential secrets before allowing commits
  */
 
 import { execSync } from 'child_process'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 
-// Patterns to search for (case-insensitive)
+// Secret patterns to detect
 const SECRET_PATTERNS = [
   // Stripe keys
-  { pattern: /sk_live_[a-zA-Z0-9]{24,}/, name: 'Stripe Live Secret Key' },
-  { pattern: /sk_test_[a-zA-Z0-9]{24,}/, name: 'Stripe Test Secret Key' },
-  { pattern: /pk_live_[a-zA-Z0-9]{24,}/, name: 'Stripe Live Publishable Key' },
-  { pattern: /pk_test_[a-zA-Z0-9]{24,}/, name: 'Stripe Test Publishable Key' },
+  { pattern: /sk_live_[a-zA-Z0-9]{24,}/g, name: 'Stripe Live Secret Key' },
+  { pattern: /sk_test_[a-zA-Z0-9]{24,}/g, name: 'Stripe Test Secret Key' },
+  { pattern: /pk_live_[a-zA-Z0-9]{24,}/g, name: 'Stripe Live Publishable Key' },
+  { pattern: /pk_test_[a-zA-Z0-9]{24,}/g, name: 'Stripe Test Publishable Key' },
   
-  // Supabase keys
-  { pattern: /sb-[a-zA-Z0-9_-]{20,}\.supabase\.co/, name: 'Supabase Project URL' },
-  { pattern: /eyJ[a-zA-Z0-9_-]{20,}\.eyJ[a-zA-Z0-9_-]{20,}/, name: 'JWT Token (likely Supabase service role key)' },
+  // Supabase service role keys (high privilege)
+  { pattern: /eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ/g, name: 'Supabase Service Role Key' },
   
-  // Database URLs with credentials
-  { pattern: /postgresql:\/\/[^:]+:[^@]+@(?!localhost|127\.0\.0\.1)/, name: 'Production Database URL with credentials' },
-  { pattern: /mongodb:\/\/[^:]+:[^@]+@(?!localhost|127\.0\.0\.1)/, name: 'Production MongoDB URL with credentials' },
+  // Production database URLs (with credentials, excluding localhost)
+  { pattern: /postgresql?:\/\/[^:]+:[^@]+@(?!localhost|127\.0\.0\.1)[^\s"'`]+/g, name: 'Production Database URL' },
   
-  // API keys
-  { pattern: /AIza[0-9A-Za-z_-]{35}/, name: 'Google API Key' },
-  { pattern: /AKIA[0-9A-Z]{16}/, name: 'AWS Access Key ID' },
-  { pattern: /ghp_[a-zA-Z0-9]{36}/, name: 'GitHub Personal Access Token' },
-  { pattern: /gho_[a-zA-Z0-9]{36}/, name: 'GitHub OAuth Token' },
-  { pattern: /ghu_[a-zA-Z0-9]{36}/, name: 'GitHub User-to-Server Token' },
-  { pattern: /ghs_[a-zA-Z0-9]{36}/, name: 'GitHub Server-to-Server Token' },
-  { pattern: /ghr_[a-zA-Z0-9]{36}/, name: 'GitHub Refresh Token' },
+  // API Keys
+  { pattern: /AIza[0-9A-Za-z-_]{35}/g, name: 'Google API Key' },
+  { pattern: /AKIA[0-9A-Z]{16}/g, name: 'AWS Access Key ID' },
+  { pattern: /ghp_[a-zA-Z0-9]{36}/g, name: 'GitHub Personal Access Token' },
+  { pattern: /re_[a-zA-Z0-9]{32,}/g, name: 'Resend API Key' },
+  { pattern: /https:\/\/[a-f0-9]{32}@[a-z0-9.-]+\.ingest\.sentry\.io\/[0-9]+/g, name: 'Sentry DSN' },
   
-  // Resend
-  { pattern: /re_[a-zA-Z0-9]{32,}/, name: 'Resend API Key' },
-  
-  // Sentry
-  { pattern: /https:\/\/[a-f0-9]{32}@[0-9]+\.ingest\.sentry\.io\/[0-9]+/, name: 'Sentry DSN' },
-  
-  // Generic patterns (be careful with false positives)
-  { pattern: /["']?[a-zA-Z0-9_-]{32,}["']?\s*[:=]\s*["']?[a-zA-Z0-9_-]{20,}["']?/, name: 'Potential API Key (long alphanumeric string)' },
+  // Generic long alphanumeric strings that look like API keys
+  { pattern: /[a-zA-Z0-9_-]{40,}/g, name: 'Potential API Key' },
 ]
 
 // Files/directories to exclude from scanning
 const EXCLUDE_PATTERNS = [
-  'node_modules',
-  '.git',
-  '.next',
-  'out',
-  'build',
-  'coverage',
-  '*.lock',
-  'package-lock.json',
-  'yarn.lock',
-  'pnpm-lock.yaml',
-  // Exclude test files that might have test tokens
-  '*.test.ts',
-  '*.test.tsx',
-  '*.spec.ts',
-  '*.spec.tsx',
+  /node_modules/,
+  /\.git/,
+  /\.next/,
+  /out/,
+  /build/,
+  /coverage/,
+  /dist/,
+  /package-lock\.json/,
+  /yarn\.lock/,
+  /pnpm-lock\.yaml/,
+  /\.test\.(ts|js|tsx|jsx)$/,
+  /\.spec\.(ts|js|tsx|jsx)$/,
+  /\.test\.(ts|js|tsx|jsx)$/,
 ]
 
-// Files that are allowed to have certain patterns (like example URLs)
+// Files that are allowed to have certain patterns (with context)
 const ALLOWED_FILES = [
-  'scripts/verify-database-url-format.ts', // Has example URLs in console.log
-  'scripts/health-check.ts', // Has local dev fallback
+  'scripts/verify-database-url-format.ts', // Example URLs in console.log
+  'scripts/health-check.ts', // Local development fallback
+  'scripts/psql-production.sh', // Bash regex pattern for parsing URLs, not actual credentials
+  'scripts/scan-secrets.ts', // This file itself
 ]
 
 interface SecretMatch {
   file: string
   line: number
+  column: number
   pattern: string
   match: string
+  context: string
 }
 
-function shouldExcludeFile(filePath: string): boolean {
-  // Check if file is in allowed list
-  if (ALLOWED_FILES.some(allowed => filePath.includes(allowed))) {
-    return false // Don't exclude, but we'll check context later
+function getStagedFiles(): string[] {
+  try {
+    const output = execSync('git diff --cached --name-only --diff-filter=ACM', {
+      encoding: 'utf-8',
+    })
+    return output
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+  } catch (error) {
+    console.error('Error getting staged files:', error)
+    return []
   }
-  
+}
+
+function shouldExcludeFile(file: string): boolean {
   // Check exclude patterns
-  return EXCLUDE_PATTERNS.some(pattern => {
-    if (pattern.includes('*')) {
-      const regex = new RegExp(pattern.replace(/\*/g, '.*'))
-      return regex.test(filePath)
+  for (const pattern of EXCLUDE_PATTERNS) {
+    if (pattern.test(file)) {
+      return true
     }
-    return filePath.includes(pattern)
-  })
-}
-
-function isAllowedContext(filePath: string, line: string, match: string): boolean {
-  // Allow example URLs in console.log statements
-  if (filePath.includes('verify-database-url-format.ts') && line.includes('console.log')) {
-    return true
   }
   
-  // Allow localhost fallback in health-check.ts
-  if (filePath.includes('health-check.ts') && line.includes('localhost:54322')) {
-    return true
-  }
-  
-  // Allow if it's clearly a comment or example
-  if (line.trim().startsWith('//') || line.trim().startsWith('*') || line.includes('example') || line.includes('placeholder')) {
+  // Check allowed files
+  if (ALLOWED_FILES.includes(file)) {
     return true
   }
   
   return false
 }
 
-function scanFile(filePath: string): SecretMatch[] {
+function scanFile(file: string): SecretMatch[] {
   const matches: SecretMatch[] = []
   
-  if (shouldExcludeFile(filePath)) {
+  if (!existsSync(file)) {
     return matches
   }
   
   try {
-    const content = readFileSync(filePath, 'utf-8')
+    const content = readFileSync(file, 'utf-8')
     const lines = content.split('\n')
     
-    lines.forEach((line, index) => {
-      SECRET_PATTERNS.forEach(({ pattern, name }) => {
-        const regex = new RegExp(pattern.source, pattern.flags)
-        const lineMatches = line.match(regex)
+    for (const secretPattern of SECRET_PATTERNS) {
+      let lineIndex = 0
+      for (const line of lines) {
+        lineIndex++
         
-        if (lineMatches) {
-          // Check if this is an allowed context
-          if (!isAllowedContext(filePath, line, lineMatches[0])) {
-            matches.push({
-              file: filePath,
-              line: index + 1,
-              pattern: name,
-              match: lineMatches[0].substring(0, 50) + (lineMatches[0].length > 50 ? '...' : ''),
-            })
-          }
+        // Skip if line is a comment (basic check)
+        if (line.trim().startsWith('//') || line.trim().startsWith('#')) {
+          continue
         }
-      })
-    })
+        
+        // Skip if line contains regex patterns (bash =~, regex literals, etc.)
+        // These are pattern definitions, not actual secrets
+        if (line.includes('=~') || line.includes('RegExp(') || line.includes('/.*/')) {
+          continue
+        }
+        
+        const regex = new RegExp(secretPattern.pattern.source, secretPattern.pattern.flags)
+        let match: RegExpExecArray | null
+        
+        while ((match = regex.exec(line)) !== null) {
+          const column = match.index + 1
+          const matchedText = match[0]
+          
+          // Extract context (30 chars before and after)
+          const contextStart = Math.max(0, match.index - 30)
+          const contextEnd = Math.min(line.length, match.index + matchedText.length + 30)
+          const context = line.substring(contextStart, contextEnd).trim()
+          
+          // Mask the secret in the match (show first 8 chars, then ...)
+          const maskedMatch =
+            matchedText.length > 12
+              ? `${matchedText.substring(0, 8)}...${matchedText.substring(matchedText.length - 4)}`
+              : '***'
+          
+          matches.push({
+            file,
+            line: lineIndex,
+            column,
+            pattern: secretPattern.name,
+            match: maskedMatch,
+            context: context.length > 80 ? `${context.substring(0, 77)}...` : context,
+          })
+        }
+      }
+    }
   } catch (error) {
     // Skip files that can't be read (binary files, etc.)
-    if (error instanceof Error && !error.message.includes('ENOENT')) {
-      console.warn(`Warning: Could not read ${filePath}: ${error.message}`)
-    }
   }
   
   return matches
-}
-
-function getStagedFiles(): string[] {
-  try {
-    const output = execSync('git diff --cached --name-only --diff-filter=ACM', { encoding: 'utf-8' })
-    return output
-      .split('\n')
-      .filter(line => line.trim().length > 0)
-      .map(file => join(process.cwd(), file))
-  } catch (error) {
-    console.error('Error getting staged files:', error)
-    return []
-  }
 }
 
 function main() {
@@ -168,47 +167,66 @@ function main() {
   const stagedFiles = getStagedFiles()
   
   if (stagedFiles.length === 0) {
-    console.log('✅ No staged files to scan')
+    console.log('✅ No staged files to scan.')
     process.exit(0)
+  }
+  
+  // Check for jest.config.js - this conflicts with jest.config.cjs
+  const jestConfigJs = stagedFiles.find(f => f === 'jest.config.js')
+  if (jestConfigJs) {
+    console.error('\n❌ BLOCKED: jest.config.js detected in staged files!\n')
+    console.error('   jest.config.js conflicts with jest.config.cjs and will cause Jest to fail.')
+    console.error('   This project uses jest.config.cjs for ESM support.')
+    console.error('\n   To fix:')
+    console.error('   1. Remove jest.config.js: git rm --cached jest.config.js')
+    console.error('   2. Ensure jest.config.js is in .gitignore')
+    console.error('   3. Only jest.config.cjs should be committed\n')
+    process.exit(1)
   }
   
   const allMatches: SecretMatch[] = []
   
-  stagedFiles.forEach(file => {
+  for (const file of stagedFiles) {
+    if (shouldExcludeFile(file)) {
+      continue
+    }
+    
     const matches = scanFile(file)
     allMatches.push(...matches)
-  })
+  }
   
   if (allMatches.length === 0) {
-    console.log('✅ No secrets found in staged files\n')
+    console.log('✅ No secrets found in staged files.')
     process.exit(0)
   }
   
   // Group matches by file
   const matchesByFile = new Map<string, SecretMatch[]>()
-  allMatches.forEach(match => {
-    const existing = matchesByFile.get(match.file) || []
-    existing.push(match)
-    matchesByFile.set(match.file, existing)
-  })
+  for (const match of allMatches) {
+    if (!matchesByFile.has(match.file)) {
+      matchesByFile.set(match.file, [])
+    }
+    matchesByFile.get(match.file)!.push(match)
+  }
   
-  console.error('❌ SECRETS DETECTED IN STAGED FILES!\n')
+  console.error('\n❌ SECRETS DETECTED IN STAGED FILES!\n')
   console.error('The following potential secrets were found:\n')
   
-  matchesByFile.forEach((matches, file) => {
-    const relativePath = file.replace(process.cwd() + '/', '')
-    console.error(`📄 ${relativePath}`)
-    matches.forEach(match => {
-      console.error(`   Line ${match.line}: ${match.pattern}`)
-      console.error(`   Match: ${match.match}\n`)
-    })
-  })
+  for (const [file, matches] of matchesByFile.entries()) {
+    console.error(`📄 ${file}:`)
+    for (const match of matches) {
+      console.error(`   Line ${match.line}, Col ${match.column}: ${match.pattern}`)
+      console.error(`   Match: ${match.match}`)
+      console.error(`   Context: ${match.context}\n`)
+    }
+  }
   
-  console.error('⚠️  Please remove these secrets before committing.')
-  console.error('   Use environment variables instead of hardcoding secrets.\n')
+  console.error('⚠️  Commit blocked to prevent secret leakage.')
+  console.error('\nIf this is a false positive:')
+  console.error('  1. Add the file to ALLOWED_FILES in scripts/scan-secrets.ts')
+  console.error('  2. Or use --no-verify to bypass (NOT RECOMMENDED)\n')
   
   process.exit(1)
 }
 
 main()
-

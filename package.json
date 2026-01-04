@@ -29,7 +29,22 @@
     "worker:setup": "tsx lib/workers/setup.ts",
     "worker:start": "tsx workers/worker.ts",
     "worker:schedule": "tsx lib/workers/schedule-jobs.ts",
-    "scan:secrets": "tsx scripts/scan-secrets.ts"
+    "worker:test": "tsx scripts/test-job-scheduling.ts",
+    "worker:verify-sequencing": "tsx scripts/verify-job-sequencing.ts",
+    "scan:secrets": "tsx scripts/scan-secrets.ts",
+    "scrape:mp-list": "tsx scripts/scrape-mp-list.ts",
+    "setup:storage": "tsx scripts/setup-storage-bucket.ts",
+    "db:view-mps": "tsx scripts/view-mps.ts",
+    "db:check-schema": "tsx scripts/check-db-schema.ts",
+    "db:migrate:phase3": "tsx scripts/run-phase3-migration.ts",
+    "db:migrate:production": "tsx scripts/migrate-production.ts",
+    "db:migrate:phase3:production": "tsx scripts/run-phase3-production.ts",
+    "db:mark-migrations": "tsx scripts/mark-migrations-applied.ts",
+    "db:backfill-personid:production": "NODE_ENV=production tsx scripts/backfill-personid-production.ts",
+    "db:migrate-data:production": "tsx scripts/migrate-data-to-production.ts",
+    "db:psql": "bash scripts/psql-production.sh",
+    "test:photo-storage": "tsx scripts/test-photo-storage.ts",
+    "populate:photo-urls": "tsx scripts/populate-photo-urls.ts"
   },
   "repository": {
     "type": "git",
@@ -66,12 +81,15 @@
     "postgres": "^3.4.7",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sharp": "^0.33.5",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
+    "@jest/globals": "^30.2.0",
     "@tailwindcss/postcss": "^4.1.17",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.10.1",
     "@types/shapefile": "^0.6.4",
     "dbf": "^0.2.0",
@@ -79,11 +97,13 @@
     "eslint-config-next": "^16.0.6",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
+    "jest": "^30.2.0",
     "prettier": "^3.7.3",
     "reproject": "^1.2.7",
     "shapefile": "^0.6.6",
     "stream-json": "^1.9.1",
     "supabase": "^2.65.2",
+    "ts-jest": "^29.4.6",
     "tsx": "^4.21.0"
   }
 }

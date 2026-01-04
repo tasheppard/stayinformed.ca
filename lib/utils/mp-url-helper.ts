@@ -85,9 +85,14 @@ export function generateMpUrlSlug(
   const slug = `${normalizedFirstName}-${normalizedLastName}(${personId})`
   
   // Validate the final format
-  // Allow alphanumeric, hyphens, parentheses, and percent-encoded characters (%XX)
+  // Format: FirstName-LastName(PersonId)
+  // Allow alphanumeric, hyphens, periods, apostrophes, and percent-encoded characters (%XX) in name part
+  // Parentheses are ONLY allowed at the end for PersonId, not in the name part
+  // This matches the validation pattern in validateMpUrlSlug for consistency
   // Percent encoding is used for accented characters (e.g., é -> %C3%A9)
-  if (!/^[a-zA-Z0-9\-()%]+$/.test(slug)) {
+  // Note: encodeURIComponent does NOT encode apostrophes or periods - they remain as literal characters
+  // Apostrophes and periods are valid URL characters and appear literally in the slug
+  if (!/^[a-zA-Z0-9\-.'%]+\([a-zA-Z0-9]+\)$/.test(slug)) {
     throw new Error(`Generated slug contains invalid characters: ${slug}`)
   }
   
@@ -115,7 +120,9 @@ export function validateMpUrlSlug(slug: string): boolean {
   // Format: FirstName-LastName(PersonId)
   // Should contain at least one hyphen, and parentheses with alphanumeric content
   // Allow percent-encoded characters (%XX) for accented characters
-  const pattern = /^[a-zA-Z0-9\-%]+\([a-zA-Z0-9]+\)$/
+  // Allow periods and apostrophes as literal characters (valid URL characters, not encoded by encodeURIComponent)
+  // Note: Parentheses are NOT allowed in the name part, only at the end for PersonId
+  const pattern = /^[a-zA-Z0-9\-.'%]+\([a-zA-Z0-9]+\)$/
   
   if (!pattern.test(slug)) {
     return false
