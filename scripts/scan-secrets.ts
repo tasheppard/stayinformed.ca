@@ -56,6 +56,7 @@ const ALLOWED_FILES = [
   'scripts/health-check.ts', // Local development fallback
   'scripts/psql-production.sh', // Bash regex pattern for parsing URLs, not actual credentials
   'scripts/scan-secrets.ts', // This file itself
+  'scripts/generate-service-role-key.ts', // Local Supabase JWT secret placeholder for dev
 ]
 
 interface SecretMatch {
