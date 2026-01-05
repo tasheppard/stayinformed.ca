@@ -49,7 +49,6 @@ data/geojson/*
 # private/internal files (keeping private for now)
 docs/
 tasks/
-lib/scrapers/
 .cursor/rules
 
 # API keys and secrets (ensure these are never committed)
