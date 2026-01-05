@@ -132,6 +132,14 @@ export async function MPProfileTabsWrapper({
   const partyAverage = undefined // TODO: Calculate expense averages
   const nationalAverage = undefined // TODO: Calculate expense averages
 
+  // Map committees to ensure meetingCount is always a number
+  const mappedCommittees = allCommittees.map((committee) => ({
+    id: committee.id,
+    committeeName: committee.committeeName,
+    role: committee.role,
+    meetingCount: committee.meetingCount ?? 0,
+  }))
+
   return (
     <MPProfileTabs
       mpId={mpId}
@@ -142,7 +150,7 @@ export async function MPProfileTabsWrapper({
       bills={allBills}
       expenses={allExpenses}
       petitions={allPetitions}
-      committees={allCommittees}
+      committees={mappedCommittees}
       recentVotes={recentVotes}
       recentBills={recentBills}
       recentExpenses={recentExpenses}
