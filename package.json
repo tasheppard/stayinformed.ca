@@ -74,7 +74,7 @@
     "drizzle-orm": "^0.44.7",
     "fuse.js": "^7.1.0",
     "graphile-worker": "^0.16.6",
-    "next": "^16.0.10",
+    "next": "^16.1.1",
     "playwright": "^1.57.0",
     "postcss": "^8.5.6",
     "postgis": "^1.0.6",
