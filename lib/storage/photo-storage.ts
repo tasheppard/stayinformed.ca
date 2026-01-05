@@ -7,19 +7,19 @@ import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
 // Lazy load sharp to avoid initialization issues if not installed
-let sharp: typeof import('sharp') | null = null
+let sharpModule: any = null
 
 async function getSharp() {
-  if (!sharp) {
+  if (!sharpModule) {
     try {
-      sharp = await import('sharp')
+      sharpModule = await import('sharp')
     } catch (error) {
       throw new Error(
         'sharp is required for image processing. Install it with: npm install sharp'
       )
     }
   }
-  return sharp
+  return sharpModule
 }
 
 interface PhotoStorageOptions {

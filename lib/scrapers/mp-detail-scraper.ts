@@ -238,8 +238,17 @@ export class MPDetailScraper extends BaseScraper<MPDetailData> {
       if (failedMPs.length > 0 && this.usePlaywright) {
         this.logInfo(`Attempting HTML fallback for ${failedMPs.length} failed MPs`)
         for (const { mp } of failedMPs) {
+          // Skip MPs without personId as Playwright scraper requires it
+          if (!mp.personId) {
+            this.logInfo(`Skipping ${mp.fullName} - no personId available`)
+            continue
+          }
           try {
-            const htmlResult = await this.scrapeWithPlaywrightForMP(mp)
+            const htmlResult = await this.scrapeWithPlaywrightForMP({
+              id: mp.id,
+              personId: mp.personId,
+              fullName: mp.fullName,
+            })
             if (htmlResult.success && htmlResult.data) {
               mpDetailData.push(htmlResult.data)
             }

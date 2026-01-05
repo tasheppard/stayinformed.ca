@@ -62,7 +62,7 @@ export async function scrapeMPList(payload: unknown, helpers: JobHelpers): Promi
         )
         logger.info('Scheduled scrapeMPDetails job to run after MP list scraping completes')
       } catch (scheduleError) {
-        logger.warn('Failed to schedule scrapeMPDetails job:', scheduleError)
+        logger.warn('Failed to schedule scrapeMPDetails job:', scheduleError as any)
         // Don't fail the entire job if scheduling fails - the external scheduler will handle it
       }
     } else {
@@ -101,7 +101,7 @@ export async function scrapeMPList(payload: unknown, helpers: JobHelpers): Promi
       }
     } catch (sentryError) {
       // Log Sentry error but don't let it mask the original error
-      logger.warn('Failed to report error to Sentry:', sentryError)
+      logger.warn('Failed to report error to Sentry:', sentryError as any)
     }
 
     throw error
@@ -169,7 +169,7 @@ export async function scrapeMPDetails(payload: unknown, helpers: JobHelpers): Pr
       }
     } catch (sentryError) {
       // Log Sentry error but don't let it mask the original error
-      logger.warn('Failed to report error to Sentry:', sentryError)
+      logger.warn('Failed to report error to Sentry:', sentryError as any)
     }
 
     throw error
