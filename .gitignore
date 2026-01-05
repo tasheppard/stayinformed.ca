@@ -50,7 +50,6 @@ data/geojson/*
 docs/
 tasks/
 lib/scrapers/
-lib/utils/comparisons.ts
 .cursor/rules
 
 # API keys and secrets (ensure these are never committed)
