@@ -11,7 +11,7 @@ import { AnalyticsTab } from './AnalyticsTab'
 import {
   calculatePartyAverages,
   calculateNationalAverages,
-} from '../../../../lib/utils/comparisons.js'
+} from '../../../../lib/utils/comparisons'
 
 interface AnalyticsTabWrapperProps {
   mpId: number
