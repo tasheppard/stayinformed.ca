@@ -2,7 +2,6 @@
   "name": "stayinformed.ca",
   "version": "1.0.1",
   "description": "**The easiest way for Canadians to track their MP's performance**",
-  "version": "1.0.1",
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
