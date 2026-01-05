@@ -3,15 +3,24 @@ import { db } from '../db'
 import { mps, ridingBoundaries } from '../db/schema'
 import { eq, and } from 'drizzle-orm'
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set')
-}
+// Lazy initialization of postgres client to avoid connecting during build
+let _sqlClient: ReturnType<typeof postgres> | null = null
 
-// Direct postgres client for raw SQL queries (PostGIS functions)
-// Using connection pooling - postgres client manages connections automatically
-const sqlClient = postgres(process.env.DATABASE_URL, {
-  max: 1, // Limit connections for serverless environments
-})
+function getSqlClient() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is not set')
+  }
+
+  if (!_sqlClient) {
+    // Direct postgres client for raw SQL queries (PostGIS functions)
+    // Using connection pooling - postgres client manages connections automatically
+    _sqlClient = postgres(process.env.DATABASE_URL, {
+      max: 1, // Limit connections for serverless environments
+    })
+  }
+
+  return _sqlClient
+}
 
 export interface GeolocationResult {
   mp: {
@@ -58,6 +67,7 @@ export async function findMPByCoordinates(
     // Use PostGIS ST_Contains to find which riding boundary contains the point
     // ST_SetSRID creates a point geometry with SRID 4326 (WGS84)
     // ST_Contains checks if the geometry contains the point
+    const sqlClient = getSqlClient()
     const result = await sqlClient`
       SELECT 
         rb.id as riding_id,
