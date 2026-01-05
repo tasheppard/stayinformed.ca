@@ -13,7 +13,7 @@ import { MPProfileTabs } from './MPProfileTabs'
 import {
   calculatePartyAverages,
   calculateNationalAverages,
-} from '@/lib/utils/comparisons'
+} from '../../../../lib/utils/comparisons'
 
 interface MPProfileTabsWrapperProps {
   mpId: number
