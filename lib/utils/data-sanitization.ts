@@ -59,7 +59,8 @@ export function toTitleCase(text: string | null | undefined): string {
     
     // Handle special cases
     // Don't capitalize certain words in the middle (unless it's the first word)
-    const lowercaseWords = ['de', 'du', 'la', 'le', 'van', 'von', 'of', 'the']
+    // Handle multi-word phrases like "van der", "de la", etc.
+    const lowercaseWords = ['de', 'du', 'la', 'le', 'van', 'von', 'of', 'the', 'der']
     if (
       index > 0 &&
       lowercaseWords.includes(word.toLowerCase()) &&
@@ -140,12 +141,16 @@ export function smartMergeText(
     return toTitleCase(raw)
   }
   
-  // If existing data is clean, preserve it
+  const sanitizedRaw = toTitleCase(raw)
+  
+  // If existing data is clean (matches sanitized raw), preserve it
   if (isCleanData(existing, raw)) {
-    return existing
+    // If existing is already perfectly clean (exactly matches sanitized raw), return it unchanged
+    // Otherwise, return sanitized raw to normalize any whitespace differences
+    return existing === sanitizedRaw ? existing : sanitizedRaw
   }
   
   // Otherwise, use sanitized raw data
-  return toTitleCase(raw)
+  return sanitizedRaw
 }
 
