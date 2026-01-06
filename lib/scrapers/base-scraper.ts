@@ -1,4 +1,6 @@
 import { db } from '../db'
+import { scraperAnomalies } from '../db/schema'
+import { eq } from 'drizzle-orm'
 import type { Browser } from 'playwright'
 
 // Lazy load Sentry to avoid initialization issues
@@ -23,6 +25,7 @@ export interface ScraperOptions {
   retryDelay?: number
   timeout?: number
   usePlaywright?: boolean
+  jobId?: string | number // Graphile Worker job ID (string in Graphile Worker 0.16.6+)
 }
 
 /**
@@ -34,12 +37,14 @@ export abstract class BaseScraper<T> {
   protected timeout: number
   protected usePlaywright: boolean
   protected browser?: Browser
+  protected jobId?: string | number // Graphile Worker job ID (string in Graphile Worker 0.16.6+)
 
   constructor(options: ScraperOptions = {}) {
     this.maxRetries = options.maxRetries ?? 3
     this.retryDelay = options.retryDelay ?? 5000 // 5 seconds
     this.timeout = options.timeout ?? 30000 // 30 seconds
     this.usePlaywright = options.usePlaywright ?? false
+    this.jobId = options.jobId
   }
 
   /**
@@ -226,8 +231,29 @@ export abstract class BaseScraper<T> {
    * Flag anomalies for manual review
    */
   protected async flagAnomalies(anomalies: string[]): Promise<void> {
-    // TODO: Implement anomaly tracking table
+    if (anomalies.length === 0) return
+    
     this.logWarning(`Anomalies detected: ${anomalies.join(', ')}`)
+    
+    // Store each anomaly in the database
+    try {
+      for (const anomaly of anomalies) {
+        // Convert jobId to string if it exists (Graphile Worker uses string IDs)
+        const jobIdString = this.jobId != null ? String(this.jobId) : null
+        
+        await db.insert(scraperAnomalies).values({
+          scraperName: this.constructor.name,
+          jobId: jobIdString,
+          anomalyType: 'data_validation',
+          description: anomaly,
+          severity: this.determineSeverity(anomaly),
+          status: 'pending',
+        })
+      }
+    } catch (error) {
+      // Log error but don't fail the scraper if anomaly storage fails
+      this.logError('Failed to store anomalies in database:', error)
+    }
     
     // Send to Sentry asynchronously (fire and forget)
     getSentry().then((sentry) => {
@@ -245,6 +271,120 @@ export abstract class BaseScraper<T> {
     }).catch(() => {
       // Ignore Sentry errors
     })
+  }
+
+  /**
+   * Determine severity level based on anomaly description
+   * 
+   * Critical: System failures, fatal errors, or explicitly critical issues
+   * High: Data integrity issues that affect correctness
+   * Medium: Recoverable issues or warnings (including recoverable errors)
+   * Low: Minor anomalies that don't affect functionality
+   */
+  protected determineSeverity(anomaly: string): 'low' | 'medium' | 'high' | 'critical' {
+    const lowerAnomaly = anomaly.toLowerCase()
+    
+    // Check for failed retry patterns first (these are critical, not recoverable)
+    // Patterns like "retry exhausted", "retry failed", "failed retry", "retry limit reached" indicate failed recovery
+    // Check for both word orders: "retry failed" and "failed retry" to catch all variations
+    const isFailedRetry = 
+      lowerAnomaly.includes('retry exhausted') ||
+      lowerAnomaly.includes('retry failed') ||
+      lowerAnomaly.includes('failed retry') ||
+      lowerAnomaly.includes('failed retries') ||
+      lowerAnomaly.includes('retry limit') ||
+      lowerAnomaly.includes('max retries') ||
+      lowerAnomaly.includes('retries exhausted') ||
+      lowerAnomaly.includes('retry attempts exhausted')
+    
+    // Check for successful/ongoing retry patterns (these are recoverable/medium)
+    // Only match if it's NOT a failed retry
+    const isSuccessfulRetry = 
+      !isFailedRetry && (
+        lowerAnomaly.includes('retry') ||
+        lowerAnomaly.includes('retrying')
+      )
+    
+    // Check for other recoverable error patterns (should be medium, not critical)
+    // Connection errors are typically transient and recoverable
+    // Check for various connection error patterns, including "failed" + "connection" combinations
+    const isConnectionError =
+      lowerAnomaly.includes('connection error') ||
+      lowerAnomaly.includes('connection failed') ||
+      lowerAnomaly.includes('failed to connect') ||
+      lowerAnomaly.includes('connect failed') ||
+      lowerAnomaly.includes('failed connecting') ||
+      lowerAnomaly.includes('connection timeout') ||
+      (lowerAnomaly.includes('failed') && lowerAnomaly.includes('connection')) || // e.g., "failed connection attempt"
+      (lowerAnomaly.includes('failed') && lowerAnomaly.includes('connect')) // e.g., "failed connect attempt"
+    
+    // Check for timeout-related failures
+    const isTimeoutFailure =
+      lowerAnomaly.includes('timeout') ||
+      (lowerAnomaly.includes('failed') && lowerAnomaly.includes('timeout')) // e.g., "failed timeout"
+    
+    const isRecoverableError = 
+      isSuccessfulRetry ||
+      lowerAnomaly.includes('recovered') ||
+      isConnectionError ||
+      isTimeoutFailure
+    
+    // Check for data integrity issues (should be high, checked first to prioritize data correctness)
+    // Data integrity issues maintain high severity regardless of recoverability or failed retries
+    const isDataIntegrityIssue =
+      lowerAnomaly.includes('invalid') ||
+      lowerAnomaly.includes('missing') ||
+      lowerAnomaly.includes('incorrect') ||
+      lowerAnomaly.includes('corrupt') ||
+      lowerAnomaly.includes('malformed') ||
+      lowerAnomaly.includes('validation failed') ||
+      lowerAnomaly.includes('data validation') ||
+      lowerAnomaly.includes('duplicate') || // e.g., "duplicate votes detected", "duplicate PersonIds detected"
+      lowerAnomaly.includes('negative') // e.g., "negative amounts", "negative signature counts", "negative meeting counts"
+    
+    // High: Data integrity issues that affect correctness (always high, even if recoverable or failed retry)
+    // Check this FIRST to ensure data integrity takes precedence over all other classifications
+    if (isDataIntegrityIssue) {
+      return 'high'
+    }
+    
+    // Critical: Failed retries are ALWAYS critical, regardless of other recoverable error patterns
+    // Check this BEFORE medium to ensure failed retries take precedence over recoverable errors
+    // Example: "max retries reached - timeout" should be critical, not medium
+    if (isFailedRetry) {
+      return 'critical'
+    }
+    
+    // Medium: Recoverable issues, warnings, successful retries, timeouts, or recovered errors
+    // Only classify as medium if NOT a data integrity issue and NOT a failed retry
+    if (
+      isRecoverableError ||
+      lowerAnomaly.includes('warning') ||
+      lowerAnomaly.includes('unexpected')
+    ) {
+      return 'medium'
+    }
+    
+    // Critical: System failures, fatal errors (exclude recoverable errors and data integrity issues)
+    // Note: "failed" is only critical if not a data integrity issue (e.g., "validation failed" is high, not critical)
+    // Failed retries are already handled above, so this only checks for other critical system failures
+    // Connection/timeout failures are already caught by isRecoverableError above
+    if (
+      !isRecoverableError && (
+        lowerAnomaly.includes('critical') ||
+        lowerAnomaly.includes('failed') ||
+        lowerAnomaly.includes('fatal error') ||
+        lowerAnomaly.includes('system error') ||
+        lowerAnomaly.includes('database error') ||
+        lowerAnomaly.includes('permission denied') ||
+        lowerAnomaly.includes('access denied')
+      )
+    ) {
+      return 'critical'
+    }
+    
+    // Low: Everything else - minor issues that don't affect functionality
+    return 'low'
   }
 }
 

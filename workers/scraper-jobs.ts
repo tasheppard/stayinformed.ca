@@ -24,7 +24,7 @@ async function getSentry() {
  * After successful completion, schedules scrapeMPDetails job to ensure sequencing
  */
 export async function scrapeMPList(payload: unknown, helpers: JobHelpers): Promise<void> {
-  const { logger } = helpers
+  const { logger, job } = helpers
   logger.info('Starting MP list scraping job...')
 
   // Get sourceUrl from scraper instance (for error reporting if scraper fails)
@@ -33,6 +33,7 @@ export async function scrapeMPList(payload: unknown, helpers: JobHelpers): Promi
   try {
     const scraper = new MPListScraper({
       usePlaywright: false, // XML should be sufficient
+      jobId: job.id,
     })
 
     // getSourceUrl() is protected, so we access it via type casting
@@ -113,7 +114,7 @@ export async function scrapeMPList(payload: unknown, helpers: JobHelpers): Promi
  * Runs MPDetailScraper and handles errors
  */
 export async function scrapeMPDetails(payload: unknown, helpers: JobHelpers): Promise<void> {
-  const { logger } = helpers
+  const { logger, job } = helpers
   logger.info('Starting MP details scraping job...')
 
   // Get sourceUrl from scraper instance (for error reporting if scraper fails)
@@ -122,6 +123,7 @@ export async function scrapeMPDetails(payload: unknown, helpers: JobHelpers): Pr
   try {
     const scraper = new MPDetailScraper({
       usePlaywright: true, // Enable Playwright fallback for failed XML requests
+      jobId: job.id,
     })
 
     // getSourceUrl() is protected, so we access it via type casting
@@ -181,7 +183,7 @@ export async function scrapeMPDetails(payload: unknown, helpers: JobHelpers): Pr
  * Runs: Hourly on sitting days
  */
 async function scrapeVotes(payload: unknown, helpers: JobHelpers) {
-  const { logger } = helpers
+  const { logger, job } = helpers
   logger.info('Starting votes scraper job')
 
   try {
@@ -190,6 +192,7 @@ async function scrapeVotes(payload: unknown, helpers: JobHelpers) {
       retryDelay: 5000,
       timeout: 30000,
       usePlaywright: true,
+      jobId: job.id,
     })
 
     const result = await scraper.run()
@@ -215,7 +218,7 @@ async function scrapeVotes(payload: unknown, helpers: JobHelpers) {
  * Runs: Daily
  */
 async function scrapeBills(payload: unknown, helpers: JobHelpers) {
-  const { logger } = helpers
+  const { logger, job } = helpers
   logger.info('Starting bills scraper job')
 
   try {
@@ -224,6 +227,7 @@ async function scrapeBills(payload: unknown, helpers: JobHelpers) {
       retryDelay: 5000,
       timeout: 30000,
       usePlaywright: true,
+      jobId: job.id,
     })
 
     const result = await scraper.run()
@@ -249,7 +253,7 @@ async function scrapeBills(payload: unknown, helpers: JobHelpers) {
  * Runs: Daily
  */
 async function scrapeExpenses(payload: unknown, helpers: JobHelpers) {
-  const { logger } = helpers
+  const { logger, job } = helpers
   logger.info('Starting expenses scraper job')
 
   try {
@@ -258,6 +262,7 @@ async function scrapeExpenses(payload: unknown, helpers: JobHelpers) {
       retryDelay: 5000,
       timeout: 30000,
       usePlaywright: true,
+      jobId: job.id,
     })
 
     const result = await scraper.run()
@@ -283,7 +288,7 @@ async function scrapeExpenses(payload: unknown, helpers: JobHelpers) {
  * Runs: Daily
  */
 async function scrapePetitions(payload: unknown, helpers: JobHelpers) {
-  const { logger } = helpers
+  const { logger, job } = helpers
   logger.info('Starting petitions scraper job')
 
   try {
@@ -292,6 +297,7 @@ async function scrapePetitions(payload: unknown, helpers: JobHelpers) {
       retryDelay: 5000,
       timeout: 30000,
       usePlaywright: true,
+      jobId: job.id,
     })
 
     const result = await scraper.run()
@@ -317,7 +323,7 @@ async function scrapePetitions(payload: unknown, helpers: JobHelpers) {
  * Runs: Daily
  */
 async function scrapeCommittees(payload: unknown, helpers: JobHelpers) {
-  const { logger } = helpers
+  const { logger, job } = helpers
   logger.info('Starting committees scraper job')
 
   try {
@@ -326,6 +332,7 @@ async function scrapeCommittees(payload: unknown, helpers: JobHelpers) {
       retryDelay: 5000,
       timeout: 30000,
       usePlaywright: true,
+      jobId: job.id,
     })
 
     const result = await scraper.run()
@@ -351,7 +358,7 @@ async function scrapeCommittees(payload: unknown, helpers: JobHelpers) {
  * Runs: Weekly (Sunday)
  */
 async function scrapeMPProfiles(payload: unknown, helpers: JobHelpers) {
-  const { logger } = helpers
+  const { logger, job } = helpers
   logger.info('Starting MP profile scraper job')
 
   try {
@@ -360,6 +367,7 @@ async function scrapeMPProfiles(payload: unknown, helpers: JobHelpers) {
       retryDelay: 5000,
       timeout: 30000,
       usePlaywright: true,
+      jobId: job.id,
     })
 
     const result = await scraper.run()
