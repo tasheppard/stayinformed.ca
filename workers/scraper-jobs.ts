@@ -389,6 +389,36 @@ async function scrapeMPProfiles(payload: unknown, helpers: JobHelpers) {
 }
 
 /**
+ * Job: Recalculate accountability scores for all MPs
+ * Runs: Daily at 1 AM EST
+ */
+async function recalculateScores(payload: unknown, helpers: JobHelpers) {
+  const { logger } = helpers
+  logger.info('Starting score recalculation job')
+
+  try {
+    const { calculateAllMPScores, saveScores } = await import('../lib/scoring/calculate-scores')
+    
+    logger.info('Calculating scores for all MPs...')
+    const scores = await calculateAllMPScores()
+    
+    logger.info(`Calculated scores for ${scores.length} MPs`)
+    
+    logger.info('Saving scores to database...')
+    await saveScores(scores)
+    
+    logger.info('Score recalculation completed successfully')
+  } catch (error) {
+    logger.error('Score recalculation job failed', { error })
+    const sentry = await getSentry()
+    if (sentry) {
+      sentry.captureException(error)
+    }
+    throw error
+  }
+}
+
+/**
  * Task list for Graphile Worker
  * Export all job functions here
  */
@@ -401,4 +431,5 @@ export const taskList = {
   scrapePetitions,
   scrapeCommittees,
   scrapeMPProfiles,
+  recalculateScores,
 }

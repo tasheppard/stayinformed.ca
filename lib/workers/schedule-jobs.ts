@@ -174,16 +174,19 @@ export async function scheduleJobs(): Promise<void> {
   })
 
   try {
-    // Default schedules (1 AM and 2 AM Eastern Time)
+    // Default schedules (1 AM, 2 AM, and 3 AM Eastern Time)
     // Format: "HH MM" (24-hour format)
     // Automatically handles DST: EST (UTC-5) or EDT (UTC-4)
+    // Score recalculation runs at 3 AM to ensure it executes after data scrapers complete
     const mpListSchedule = process.env.MP_LIST_SCRAPER_SCHEDULE || '01 00' // 1 AM Eastern Time
     const mpDetailsSchedule = process.env.MP_DETAIL_SCRAPER_SCHEDULE || '02 00' // 2 AM Eastern Time
+    const scoresSchedule = process.env.SCORES_RECALCULATION_SCHEDULE || '03 00' // 3 AM Eastern Time (after scrapers complete)
 
     // Calculate next run times (automatically handles EST/EDT based on DST)
     // getNextRunTime will determine the correct offset based on the current date
     const mpListNextRun = getNextRunTime(mpListSchedule)
     const mpDetailsNextRun = getNextRunTime(mpDetailsSchedule)
+    const scoresNextRun = getNextRunTime(scoresSchedule)
 
     // Schedule scrapeMPList job
     // Job key ensures idempotency - only one job will be scheduled per key
@@ -219,6 +222,20 @@ export async function scheduleJobs(): Promise<void> {
 
     console.log(`✅ Scheduled scrapeMPDetails job (key: scrape-mp-details-daily)`)
     console.log(`   Next run: ${mpDetailsNextRun.toISOString()} (${mpDetailsSchedule} ${timezoneLabel})`)
+
+    // Schedule score recalculation job
+    await runner.addJob(
+      'recalculateScores',
+      {},
+      {
+        jobKey: 'recalculate-scores-daily',
+        jobKeyMode: 'replace',
+        runAt: scoresNextRun,
+      }
+    )
+
+    console.log(`✅ Scheduled recalculateScores job (key: recalculate-scores-daily)`)
+    console.log(`   Next run: ${scoresNextRun.toISOString()} (${scoresSchedule} ${timezoneLabel})`)
     console.log('')
     console.log('ℹ️  Note: For production, this script should be called by:')
     console.log('   - System cron (daily)')
