@@ -10,7 +10,7 @@ import {
 } from '@/lib/db/schema'
 import { eq, desc, and, gte, like, or, isNull, gt } from 'drizzle-orm'
 import { getUserWithPremium } from '@/lib/auth/get-user-with-premium'
-import { convertToCSV, generateFilename } from '@/lib/utils/csv-export'
+import { convertToCSV, generateFilename, formatDateLocal } from '@/lib/utils/csv-export'
 
 const CURRENT_PARLIAMENT_PREFIX = '45-'
 const CURRENT_PARLIAMENT_START_DATE = new Date('2021-09-20')
@@ -85,7 +85,7 @@ export async function GET(
         csvData = convertToCSV(
           allVotes.map((vote) => ({
             voteNumber: vote.voteNumber,
-            date: new Date(vote.date).toISOString().split('T')[0],
+            date: formatDateLocal(vote.date),
             session: vote.session,
             billNumber: vote.billNumber || '',
             billTitle: vote.billTitle || '',
@@ -142,9 +142,7 @@ export async function GET(
           allBills.map((bill) => ({
             billNumber: bill.billNumber,
             title: bill.title,
-            introductionDate: bill.introductionDate
-              ? new Date(bill.introductionDate).toISOString().split('T')[0]
-              : '',
+            introductionDate: formatDateLocal(bill.introductionDate),
             status: bill.status || '',
             summary: bill.summary || '',
           })),
@@ -171,11 +169,9 @@ export async function GET(
           allPetitions.map((petition) => ({
             petitionNumber: petition.petitionNumber,
             title: petition.title,
-            presentedDate: petition.presentedDate
-              ? new Date(petition.presentedDate).toISOString().split('T')[0]
-              : '',
+            presentedDate: formatDateLocal(petition.presentedDate),
             status: petition.status || '',
-            signatureCount: petition.signatureCount || '',
+            signatureCount: petition.signatureCount ?? '',
           })),
           [
             { key: 'petitionNumber', label: 'Petition Number' },
@@ -200,13 +196,9 @@ export async function GET(
           allCommittees.map((committee) => ({
             committeeName: committee.committeeName,
             role: committee.role || '',
-            startDate: committee.startDate
-              ? new Date(committee.startDate).toISOString().split('T')[0]
-              : '',
-            endDate: committee.endDate
-              ? new Date(committee.endDate).toISOString().split('T')[0]
-              : '',
-            meetingCount: committee.meetingCount || 0,
+            startDate: formatDateLocal(committee.startDate),
+            endDate: formatDateLocal(committee.endDate),
+            meetingCount: committee.meetingCount ?? 0,
           })),
           [
             { key: 'committeeName', label: 'Committee Name' },
