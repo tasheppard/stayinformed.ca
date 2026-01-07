@@ -89,6 +89,24 @@ export default function Home() {
               </p>
             </div>
           </div>
+
+          {/* Premium Feature CTA */}
+          <div className="mt-12 text-center">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 inline-block">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Premium Feature: Compare Multiple MPs
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Compare accountability scores, voting records, and performance metrics across multiple MPs side-by-side.
+              </p>
+              <a
+                href="/compare"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Compare MPs →
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </main>
