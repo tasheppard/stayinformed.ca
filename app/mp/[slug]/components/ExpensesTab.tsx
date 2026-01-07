@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { BarChart, DonutChart } from '@tremor/react'
 import { PremiumGate } from '@/components/premium/PremiumGate'
 import { CSVExportButton } from '@/components/ui/CSVExportButton'
@@ -248,10 +249,16 @@ export function ExpensesTab({
               </svg>
             </div>
             <div className="flex-1">
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-700 mb-3">
                 You're viewing expenses from the current fiscal year (FY {currentFiscalYear}) only.{' '}
                 <span className="font-medium">Upgrade to Premium</span> to access historical expense data from past fiscal years.
               </p>
+              <Link
+                href="/subscribe"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              >
+                Upgrade to Premium →
+              </Link>
             </div>
           </div>
         </div>
