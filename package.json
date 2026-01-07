@@ -44,7 +44,8 @@
     "db:migrate-data:production": "tsx scripts/migrate-data-to-production.ts",
     "db:psql": "bash scripts/psql-production.sh",
     "test:photo-storage": "tsx scripts/test-photo-storage.ts",
-    "populate:photo-urls": "tsx scripts/populate-photo-urls.ts"
+    "populate:photo-urls": "tsx scripts/populate-photo-urls.ts",
+    "stripe:setup": "tsx scripts/setup-stripe.ts"
   },
   "repository": {
     "type": "git",
@@ -82,6 +83,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "sharp": "^0.33.5",
+    "stripe": "^20.1.1",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
     "xml2js": "^0.6.2"

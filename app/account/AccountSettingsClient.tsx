@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
@@ -20,18 +20,29 @@ interface AccountSettingsClientProps {
   user: User
   userData: UserData | null
   supabaseUrl: string
+  sessionId?: string
 }
 
 export default function AccountSettingsClient({
   user,
   userData,
   supabaseUrl,
+  sessionId,
 }: AccountSettingsClientProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  // Show success message if redirected from successful checkout
+  useEffect(() => {
+    if (sessionId) {
+      setMessage('Subscription activated successfully! Welcome to Premium.')
+      // Refresh user data
+      router.refresh()
+    }
+  }, [sessionId, router])
 
   const handleSignOut = async () => {
     setLoading(true)
@@ -128,31 +139,76 @@ export default function AccountSettingsClient({
       </div>
 
       {/* Subscription */}
-      {userData?.isPremium && (
-        <div>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Subscription
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Status
-              </label>
-              <p className="mt-1 text-sm text-gray-900">
-                {userData.subscriptionStatus || 'Active'}
-              </p>
-            </div>
-            <div>
+      <div>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">
+          Subscription
+        </h2>
+        <div className="space-y-4">
+          {userData?.isPremium ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Status
+                </label>
+                <p className="mt-1 text-sm text-gray-900">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Premium - {userData.subscriptionStatus || 'Active'}
+                  </span>
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  setLoading(true)
+                  setError(null)
+                  try {
+                    const response = await fetch('/api/customer-portal', {
+                      method: 'POST',
+                    })
+
+                    if (!response.ok) {
+                      const data = await response.json()
+                      throw new Error(data.error || 'Failed to create customer portal session')
+                    }
+
+                    const { url } = await response.json()
+                    if (url) {
+                      window.location.href = url
+                    } else {
+                      throw new Error('No portal URL returned')
+                    }
+                  } catch (error) {
+                    setError(error instanceof Error ? error.message : 'Failed to open customer portal')
+                    setLoading(false)
+                  }
+                }}
+                disabled={loading}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {loading ? 'Loading...' : 'Manage Subscription'}
+              </button>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Current Plan
+                </label>
+                <p className="mt-1 text-sm text-gray-900">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    Free
+                  </span>
+                </p>
+              </div>
               <Link
                 href="/subscribe"
-                className="text-sm text-blue-600 hover:text-blue-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Manage subscription →
+                Upgrade to Premium →
               </Link>
-            </div>
-          </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Update Email */}
       <div>
