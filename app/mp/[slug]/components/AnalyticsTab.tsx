@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { LineChart, BarChart } from '@tremor/react'
+import { CSVExportButton } from '@/components/ui/CSVExportButton'
 
 interface Vote {
   id: number
@@ -379,9 +380,12 @@ export function AnalyticsTab({
 
       {/* Bills Sponsored */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          Bills Sponsored ({bills.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            Bills Sponsored ({bills.length})
+          </h2>
+          <CSVExportButton slug={slug} exportType="bills" />
+        </div>
         {bills.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
             No bills sponsored yet{!isPremium ? ' in the current parliament' : ''}.
@@ -462,9 +466,12 @@ export function AnalyticsTab({
 
       {/* Petitions Sponsored */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          Petitions Sponsored ({petitions.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            Petitions Sponsored ({petitions.length})
+          </h2>
+          <CSVExportButton slug={slug} exportType="petitions" />
+        </div>
         {petitions.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
             No petitions sponsored yet{!isPremium ? ' in the current parliament' : ''}.
@@ -547,9 +554,12 @@ export function AnalyticsTab({
 
       {/* Committee Participation */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          Committee Participation ({committees.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            Committee Participation ({committees.length})
+          </h2>
+          <CSVExportButton slug={slug} exportType="committees" />
+        </div>
         {committees.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
             No committee participation recorded.

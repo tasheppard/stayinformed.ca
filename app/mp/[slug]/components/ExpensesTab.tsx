@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { BarChart, DonutChart } from '@tremor/react'
 import { PremiumGate } from '@/components/premium/PremiumGate'
+import { CSVExportButton } from '@/components/ui/CSVExportButton'
 
 interface Expense {
   id: number
@@ -334,10 +335,13 @@ export function ExpensesTab({
 
       {/* Category Breakdown Chart */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          Expenses by Category
-          {selectedFiscalYear === 'all' ? ' (All Years)' : ` (FY ${selectedFiscalYear})`}
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            Expenses by Category
+            {selectedFiscalYear === 'all' ? ' (All Years)' : ` (FY ${selectedFiscalYear})`}
+          </h2>
+          <CSVExportButton slug={slug} exportType="expenses" />
+        </div>
         {categoryChartData.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>

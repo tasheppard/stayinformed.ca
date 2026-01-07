@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { CSVExportButton } from '@/components/ui/CSVExportButton'
 
 interface Vote {
   id: number
@@ -152,7 +153,10 @@ export function VotingRecordTab({ mpId, slug, votes, isPremium }: VotingRecordTa
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">Voting Record</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Voting Record</h2>
+          <CSVExportButton slug={slug} exportType="votes" />
+        </div>
 
         {/* Vote Type Filter */}
         <div className="mb-4">
