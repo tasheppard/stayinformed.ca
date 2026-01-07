@@ -8,22 +8,33 @@ import {
   committeeParticipation,
   mps,
 } from '@/lib/db/schema'
-import { eq, desc, and, gte, isNotNull } from 'drizzle-orm'
+import { eq, desc, and, gte, isNotNull, or, isNull, gt, like } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { MPProfileTabs } from './MPProfileTabs'
 import {
   calculatePartyAverages,
   calculateNationalAverages,
 } from '../../../../lib/utils/comparisons'
+import { getUserWithPremium } from '@/lib/auth/get-user-with-premium'
 
 interface MPProfileTabsWrapperProps {
   mpId: number
   slug: string
 }
 
+// Current parliament is 45th (sessions start with "45-")
+// Free users only see current parliament (45th)
+// Premium users see past 3 parliaments (43rd, 44th, 45th)
+const CURRENT_PARLIAMENT_PREFIX = '45-'
+const CURRENT_PARLIAMENT_START_DATE = new Date('2021-09-20') // 45th parliament started Sept 20, 2021
+
 export async function MPProfileTabsWrapper({
   mpId,
   slug,
 }: MPProfileTabsWrapperProps) {
+  // Check premium status
+  const { isPremium } = await getUserWithPremium()
+
   // Fetch all data in parallel for better performance
   const [
     mpData,
@@ -51,39 +62,83 @@ export async function MPProfileTabsWrapper({
       .limit(1)
       .then((results) => results[0] || null),
 
-    // All votes
+    // All votes - filter by parliament for free users
     db
       .select()
       .from(votes)
-      .where(eq(votes.mpId, mpId))
+      .where(
+        isPremium
+          ? eq(votes.mpId, mpId)
+          : and(
+              eq(votes.mpId, mpId),
+              like(votes.session, `${CURRENT_PARLIAMENT_PREFIX}%`)
+            )
+      )
       .orderBy(desc(votes.date)),
 
-    // Bills sponsored
+    // Bills sponsored - filter by date for free users (current parliament started Sept 20, 2021)
     db
       .select()
       .from(bills)
-      .where(eq(bills.sponsorMpId, mpId))
+      .where(
+        isPremium
+          ? eq(bills.sponsorMpId, mpId)
+          : and(
+              eq(bills.sponsorMpId, mpId),
+              gte(bills.introductionDate, CURRENT_PARLIAMENT_START_DATE)
+            )
+      )
       .orderBy(desc(bills.introductionDate)),
 
-    // Expenses
+    // Expenses - filter by fiscal year and quarter for free users
+    // Parliament started Sept 20, 2021, so exclude Q1 and Q2 of fiscal year 2021 (pre-parliament)
+    // Include: fiscalYear > 2021 OR (fiscalYear = 2021 AND quarter >= 3)
     db
       .select()
       .from(expenses)
-      .where(eq(expenses.mpId, mpId))
+      .where(
+        isPremium
+          ? eq(expenses.mpId, mpId)
+          : and(
+              eq(expenses.mpId, mpId),
+              or(
+                gt(expenses.fiscalYear, 2021), // All of fiscal year 2022 and later
+                and(eq(expenses.fiscalYear, 2021), gte(expenses.quarter, 3)) // Q3 and Q4 of 2021 (Oct 2021 - Mar 2022)
+              )
+            )
+      )
       .orderBy(desc(expenses.fiscalYear), desc(expenses.quarter)),
 
-    // Petitions
+    // Petitions - filter by date for free users (current parliament started Sept 20, 2021)
     db
       .select()
       .from(petitions)
-      .where(eq(petitions.sponsorMpId, mpId))
+      .where(
+        isPremium
+          ? eq(petitions.sponsorMpId, mpId)
+          : and(
+              eq(petitions.sponsorMpId, mpId),
+              gte(petitions.presentedDate, CURRENT_PARLIAMENT_START_DATE)
+            )
+      )
       .orderBy(desc(petitions.presentedDate)),
 
-    // Committees
+    // Committees - filter by date for free users (current parliament started Sept 20, 2021)
+    // Include committees with null startDate (likely current/ongoing) or startDate >= parliament start
     db
       .select()
       .from(committeeParticipation)
-      .where(eq(committeeParticipation.mpId, mpId))
+      .where(
+        isPremium
+          ? eq(committeeParticipation.mpId, mpId)
+          : and(
+              eq(committeeParticipation.mpId, mpId),
+              or(
+                isNull(committeeParticipation.startDate), // Include null startDates (likely current)
+                gte(committeeParticipation.startDate, CURRENT_PARLIAMENT_START_DATE)
+              )
+            )
+      )
       .orderBy(desc(committeeParticipation.startDate)),
   ])
 
@@ -159,6 +214,7 @@ export async function MPProfileTabsWrapper({
       nationalAverage={nationalAverage}
       partyAverages={partyAverages}
       nationalAverages={nationalAverages}
+      isPremium={isPremium}
     />
   )
 }

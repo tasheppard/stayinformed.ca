@@ -16,11 +16,14 @@ interface VotingRecordTabProps {
   mpId: number
   slug: string
   votes: Vote[]
+  isPremium: boolean
 }
 
 type VoteTypeFilter = 'all' | 'Yea' | 'Nay' | 'Paired' | 'Abstained'
 
-export function VotingRecordTab({ mpId, slug, votes }: VotingRecordTabProps) {
+const CURRENT_PARLIAMENT_PREFIX = '45-'
+
+export function VotingRecordTab({ mpId, slug, votes, isPremium }: VotingRecordTabProps) {
   const [voteTypeFilter, setVoteTypeFilter] = useState<VoteTypeFilter>('all')
   const [dateRangeFilter, setDateRangeFilter] = useState<'all' | '30' | '90' | '365'>('all')
 
@@ -88,19 +91,65 @@ export function VotingRecordTab({ mpId, slug, votes }: VotingRecordTabProps) {
     return `https://www.parl.ca/LegisInfo/BillDetails.aspx?billId=${encodeURIComponent(billNumber)}`
   }
 
-  // Count votes by type
+  // Get votes filtered by date range only (for count display)
+  const dateFilteredVotes = useMemo(() => {
+    if (dateRangeFilter === 'all') {
+      return votes
+    }
+    const daysAgo = parseInt(dateRangeFilter)
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - daysAgo)
+    return votes.filter((vote) => {
+      const voteDate = new Date(vote.date)
+      return voteDate >= cutoffDate
+    })
+  }, [votes, dateRangeFilter])
+
+  // Count votes by type (within the selected date range)
   const voteCounts = useMemo(() => {
     return {
-      all: votes.length,
-      Yea: votes.filter((v) => v.voteResult === 'Yea').length,
-      Nay: votes.filter((v) => v.voteResult === 'Nay').length,
-      Abstained: votes.filter((v) => v.voteResult === 'Abstained').length,
-      Paired: votes.filter((v) => v.voteResult === 'Paired').length,
+      all: dateFilteredVotes.length,
+      Yea: dateFilteredVotes.filter((v) => v.voteResult === 'Yea').length,
+      Nay: dateFilteredVotes.filter((v) => v.voteResult === 'Nay').length,
+      Abstained: dateFilteredVotes.filter((v) => v.voteResult === 'Abstained').length,
+      Paired: dateFilteredVotes.filter((v) => v.voteResult === 'Paired').length,
     }
-  }, [votes])
+  }, [dateFilteredVotes])
+
+  // Count current parliament votes (server already filters for free users, but we still count for display)
+  const currentParliamentVotes = votes.filter((vote) => vote.session.startsWith(CURRENT_PARLIAMENT_PREFIX))
 
   return (
     <div className="space-y-6">
+      {/* Historical Data Notice for Free Users */}
+      {!isPremium && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg
+                className="w-5 h-5 text-blue-600 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-gray-700">
+                You're viewing votes from the current parliament (45th) only. 
+                <span className="font-medium"> Upgrade to Premium</span> to access historical voting records from past parliaments.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-semibold mb-4">Voting Record</h2>
@@ -217,7 +266,12 @@ export function VotingRecordTab({ mpId, slug, votes }: VotingRecordTabProps) {
 
         {/* Results Count */}
         <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredVotes.length} of {votes.length} votes
+          Showing {filteredVotes.length} of {dateFilteredVotes.length} votes
+          {!isPremium && (
+            <span className="text-gray-500 ml-1">
+              (current parliament only)
+            </span>
+          )}
         </div>
       </div>
 

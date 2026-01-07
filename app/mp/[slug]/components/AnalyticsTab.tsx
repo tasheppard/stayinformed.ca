@@ -7,6 +7,7 @@ interface Vote {
   id: number
   date: Date | string
   voteResult: string
+  session?: string
 }
 
 interface Bill {
@@ -49,7 +50,10 @@ interface AnalyticsTabProps {
   committees: Committee[]
   partyAverages?: ComparisonStats | null
   nationalAverages?: ComparisonStats
+  isPremium: boolean
 }
+
+const CURRENT_PARLIAMENT_START_DATE = new Date('2021-09-20')
 
 export function AnalyticsTab({
   mpId,
@@ -60,7 +64,12 @@ export function AnalyticsTab({
   committees,
   partyAverages,
   nationalAverages,
+  isPremium,
 }: AnalyticsTabProps) {
+  // Note: Data is already filtered server-side by parliament/session for free users
+  // Votes are filtered by session (LIKE '45-%'), bills and petitions by date (>= 2021-09-20)
+  // No client-side filtering needed to avoid conflicts
+
   // Calculate voting participation rate over time (monthly)
   const votingParticipationData = useMemo(() => {
     // Group votes by month
@@ -124,6 +133,35 @@ export function AnalyticsTab({
 
   return (
     <div className="space-y-6">
+      {/* Historical Data Notice for Free Users */}
+      {!isPremium && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg
+                className="w-5 h-5 text-blue-600 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-gray-700">
+                Analytics shown are for the current parliament (45th) only. 
+                <span className="font-medium"> Upgrade to Premium</span> to view historical data from past parliaments.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-4">
@@ -346,7 +384,7 @@ export function AnalyticsTab({
         </h2>
         {bills.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
-            No bills sponsored yet.
+            No bills sponsored yet{!isPremium ? ' in the current parliament' : ''}.
           </p>
         ) : (
           <div className="space-y-3">
@@ -411,6 +449,11 @@ export function AnalyticsTab({
             {bills.length > 10 && (
               <p className="text-sm text-gray-500 text-center pt-2">
                 Showing 10 of {bills.length} bills
+                {!isPremium && (
+                  <span className="ml-1">
+                    (current parliament only)
+                  </span>
+                )}
               </p>
             )}
           </div>
@@ -424,7 +467,7 @@ export function AnalyticsTab({
         </h2>
         {petitions.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
-            No petitions sponsored yet.
+            No petitions sponsored yet{!isPremium ? ' in the current parliament' : ''}.
           </p>
         ) : (
           <div className="space-y-3">
@@ -491,6 +534,11 @@ export function AnalyticsTab({
             {petitions.length > 10 && (
               <p className="text-sm text-gray-500 text-center pt-2">
                 Showing 10 of {petitions.length} petitions
+                {!isPremium && (
+                  <span className="ml-1">
+                    (current parliament only)
+                  </span>
+                )}
               </p>
             )}
           </div>
