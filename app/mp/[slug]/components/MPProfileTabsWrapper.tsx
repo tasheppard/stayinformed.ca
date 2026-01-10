@@ -14,7 +14,7 @@ import { MPProfileTabs } from './MPProfileTabs'
 import {
   calculatePartyAverages,
   calculateNationalAverages,
-} from '../../../../lib/utils/comparisons'
+} from '@/lib/utils/comparisons'
 import { getUserWithPremium } from '@/lib/auth/get-user-with-premium'
 
 interface MPProfileTabsWrapperProps {
