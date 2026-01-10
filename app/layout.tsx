@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { AuthProvider } from '../lib/auth/context'
+import { Navigation } from '@/components/Navigation'
 
 export const metadata: Metadata = {
   title: 'StayInformed.ca - Track Your MP\'s Performance',
@@ -15,7 +16,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <Navigation />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   )

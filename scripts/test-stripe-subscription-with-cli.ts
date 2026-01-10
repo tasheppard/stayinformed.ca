@@ -27,6 +27,14 @@
  *      tsx scripts/test-stripe-subscription-with-cli.ts <test-user-email>
  */
 
+import * as dotenv from 'dotenv'
+
+// Load environment variables from .env.local (or .env if .env.local doesn't exist)
+dotenv.config({ path: '.env.local' })
+if (!process.env.STRIPE_SECRET_KEY) {
+  dotenv.config({ path: '.env' })
+}
+
 import { stripe } from '../lib/stripe/client'
 import { db } from '../lib/db'
 import { users } from '../lib/db/schema'
