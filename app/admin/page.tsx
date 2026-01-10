@@ -483,7 +483,7 @@ export default function AdminDashboard() {
                   step="0.01"
                   min="0"
                   max="1"
-                  value={editingWeights.legislativeActivity}
+                  value={editingWeights.legislativeActivity.toString()}
                   onChange={(e) =>
                     handleWeightChange('legislativeActivity', e.target.value)
                   }
@@ -504,7 +504,7 @@ export default function AdminDashboard() {
                   step="0.01"
                   min="0"
                   max="1"
-                  value={editingWeights.fiscalResponsibility}
+                  value={editingWeights.fiscalResponsibility.toString()}
                   onChange={(e) =>
                     handleWeightChange('fiscalResponsibility', e.target.value)
                   }
@@ -525,7 +525,7 @@ export default function AdminDashboard() {
                   step="0.01"
                   min="0"
                   max="1"
-                  value={editingWeights.constituentEngagement}
+                  value={editingWeights.constituentEngagement.toString()}
                   onChange={(e) =>
                     handleWeightChange('constituentEngagement', e.target.value)
                   }
@@ -546,7 +546,7 @@ export default function AdminDashboard() {
                   step="0.01"
                   min="0"
                   max="1"
-                  value={editingWeights.votingParticipation}
+                  value={editingWeights.votingParticipation.toString()}
                   onChange={(e) =>
                     handleWeightChange('votingParticipation', e.target.value)
                   }

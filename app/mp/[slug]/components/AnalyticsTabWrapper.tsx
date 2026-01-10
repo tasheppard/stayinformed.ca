@@ -11,7 +11,8 @@ import { AnalyticsTab } from './AnalyticsTab'
 import {
   calculatePartyAverages,
   calculateNationalAverages,
-} from '../../../../lib/utils/comparisons'
+} from '@/lib/utils/comparisons'
+import { getUserWithPremium } from '@/lib/auth/get-user-with-premium'
 
 interface AnalyticsTabWrapperProps {
   mpId: number
@@ -22,6 +23,9 @@ export async function AnalyticsTabWrapper({
   mpId,
   slug,
 }: AnalyticsTabWrapperProps) {
+  // Check premium status
+  const { isPremium } = await getUserWithPremium()
+
   // Fetch MP data to get party information
   const mpData = await db
     .select({ caucusShortName: mps.caucusShortName })
@@ -92,6 +96,7 @@ export async function AnalyticsTabWrapper({
       committees={mappedCommittees}
       partyAverages={partyAverages}
       nationalAverages={nationalAverages}
+      isPremium={isPremium}
     />
   )
 }

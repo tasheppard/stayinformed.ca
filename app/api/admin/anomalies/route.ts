@@ -75,50 +75,18 @@ export async function GET(request: Request) {
     const anomalies = await query
 
     // Get statistics - apply the same filters as the anomalies query
-    // Build WHERE clause using the same conditions
-    let statsQuery: ReturnType<typeof sql>
+    // Use Drizzle's query builder for statistics
+    const statsQuery = db
+      .select({
+        status: scraperAnomalies.status,
+        severity: scraperAnomalies.severity,
+        count: sql<number>`COUNT(*)`.as('count'),
+      })
+      .from(scraperAnomalies)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(scraperAnomalies.status, scraperAnomalies.severity)
     
-    if (conditions.length > 0) {
-      // Build WHERE clause parts
-      const whereParts: string[] = []
-      const params: any[] = []
-      
-      if (status) {
-        whereParts.push(`status = $${params.length + 1}`)
-        params.push(status)
-      }
-      if (severity) {
-        whereParts.push(`severity = $${params.length + 1}`)
-        params.push(severity)
-      }
-      if (scraper) {
-        whereParts.push(`scraper_name = $${params.length + 1}`)
-        params.push(scraper)
-      }
-      
-      // Use sql.unsafe to properly parameterize the query
-      statsQuery = sql.unsafe(
-        `SELECT 
-          status,
-          severity,
-          COUNT(*) as count
-        FROM scraper_anomalies
-        WHERE ${whereParts.join(' AND ')}
-        GROUP BY status, severity`,
-        params
-      )
-    } else {
-      statsQuery = sql`
-        SELECT 
-          status,
-          severity,
-          COUNT(*) as count
-        FROM scraper_anomalies
-        GROUP BY status, severity
-      `
-    }
-    
-    const stats = await db.execute(statsQuery)
+    const stats = await statsQuery
 
     return NextResponse.json({
       anomalies,
