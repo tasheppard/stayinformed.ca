@@ -45,7 +45,10 @@
     "db:psql": "bash scripts/psql-production.sh",
     "test:photo-storage": "tsx scripts/test-photo-storage.ts",
     "populate:photo-urls": "tsx scripts/populate-photo-urls.ts",
-    "stripe:setup": "tsx scripts/setup-stripe.ts"
+    "stripe:setup": "tsx scripts/setup-stripe.ts",
+    "test:stripe:flow": "tsx scripts/test-stripe-subscription-flow.ts",
+    "test:stripe:automated": "tsx scripts/test-stripe-subscription-automated.ts",
+    "test:stripe:cli": "tsx scripts/test-stripe-subscription-with-cli.ts"
   },
   "repository": {
     "type": "git",
