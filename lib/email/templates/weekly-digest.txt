@@ -1,0 +1,17 @@
+StayInformed.ca - Your Weekly MP Activity Digest
+==================================================
+
+Hello {{userName}},
+
+Here's a summary of your followed MPs' activities from the past 7 days:
+
+{{MP_SECTIONS}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Visit StayInformed.ca: {{baseUrl}}
+Account Settings: {{baseUrl}}/account
+
+Unsubscribe: {{unsubscribeUrl}}
+
+StayInformed.ca · The easiest way to track your MP's performance

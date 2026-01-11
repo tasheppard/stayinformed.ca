@@ -91,10 +91,20 @@ lib/email/
 ├── README.md           # This file
 ├── resend-client.ts    # Resend client initialization
 ├── weekly-digest.ts    # Weekly digest email generator (TODO)
-└── templates/          # Email templates (TODO)
-    ├── weekly-digest.html
-    └── weekly-digest.txt
+└── templates/          # Email templates
+    ├── weekly-digest.html  # HTML template (uses simple {{variable}} placeholders)
+    └── weekly-digest.txt   # Plain text template (uses simple {{variable}} placeholders)
 ```
+
+### Template Format
+
+Templates use simple double-brace placeholders (`{{variableName}}`) that are replaced with string substitution in TypeScript code. The templates do NOT use Handlebars syntax - all conditional logic and loops are handled in the weekly-digest.ts generator function.
+
+Placeholders:
+- `{{userName}}` - User's name or email
+- `{{baseUrl}}` - Base URL of the website (e.g., https://stayinformed.ca)
+- `{{unsubscribeUrl}}` - URL for unsubscribing from emails
+- `{{MP_SECTIONS}}` - Fully rendered HTML/text for all MP activity sections (generated in code)
 
 ## Security & Best Practices
 
