@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth/context'
 import { useRouter } from 'next/navigation'
@@ -7,6 +8,12 @@ import { useRouter } from 'next/navigation'
 export function Navigation() {
   const { user, loading, signOut } = useAuth()
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+
+  // Only render after client-side hydration to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSignOut = async () => {
     await signOut()
@@ -28,7 +35,7 @@ export function Navigation() {
 
           {/* Right side navigation */}
           <div className="flex items-center gap-4">
-            {loading ? (
+            {!mounted || loading ? (
               <div className="text-sm text-gray-500">Loading...</div>
             ) : user ? (
               <>
