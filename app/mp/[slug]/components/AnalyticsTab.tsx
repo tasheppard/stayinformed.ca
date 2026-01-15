@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { LineChart, BarChart } from '@tremor/react'
+import dynamic from 'next/dynamic'
 import { CSVExportButton } from '@/components/ui/CSVExportButton'
 
 interface Vote {
@@ -56,6 +56,26 @@ interface AnalyticsTabProps {
 }
 
 const CURRENT_PARLIAMENT_START_DATE = new Date('2021-09-20')
+
+const LineChart = dynamic(
+  () => import('@tremor/react').then((mod) => mod.LineChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 w-full animate-pulse rounded-lg bg-gray-100" />
+    ),
+  }
+)
+
+const BarChart = dynamic(
+  () => import('@tremor/react').then((mod) => mod.BarChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 w-full animate-pulse rounded-lg bg-gray-100" />
+    ),
+  }
+)
 
 export function AnalyticsTab({
   mpId,

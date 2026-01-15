@@ -49,7 +49,8 @@
     "test:stripe:flow": "tsx scripts/test-stripe-subscription-flow.ts",
     "test:stripe:automated": "tsx scripts/test-stripe-subscription-automated.ts",
     "test:stripe:cli": "tsx scripts/test-stripe-subscription-with-cli.ts",
-    "test:resend": "tsx scripts/test-resend.ts"
+    "test:resend": "tsx scripts/test-resend.ts",
+    "test:weekly-digest": "tsx scripts/test-weekly-digest.ts"
   },
   "repository": {
     "type": "git",

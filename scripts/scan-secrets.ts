@@ -57,6 +57,9 @@ const ALLOWED_FILES = [
   'scripts/psql-production.sh', // Bash regex pattern for parsing URLs, not actual credentials
   'scripts/scan-secrets.ts', // This file itself
   'scripts/generate-service-role-key.ts', // Local Supabase JWT secret placeholder for dev
+  'lib/db/migrations/0005_create_weekly_digest_sent.sql',
+  'lib/db/migrations/0006_add_email_delivery_tracking.sql',
+  'lib/db/migrations/0007_add_query_indexes.sql',
 ]
 
 interface SecretMatch {

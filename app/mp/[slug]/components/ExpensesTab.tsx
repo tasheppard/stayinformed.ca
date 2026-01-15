@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { BarChart, DonutChart } from '@tremor/react'
 import { PremiumGate } from '@/components/premium/PremiumGate'
@@ -50,6 +50,7 @@ export function ExpensesTab({
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<number | 'all'>(
     isPremium ? 'all' : currentFiscalYear
   )
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Get available fiscal years (for premium users)
   const availableFiscalYears = useMemo(() => {
@@ -70,6 +71,10 @@ export function ExpensesTab({
     }
     return expenses.filter((e) => e.fiscalYear === selectedFiscalYear)
   }, [expenses, selectedFiscalYear, isPremium, currentFiscalYear])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedFiscalYear, isPremium])
 
   // Calculate totals by category for selected fiscal year(s)
   const categoryTotals = useMemo(() => {
@@ -199,6 +204,14 @@ export function ExpensesTab({
     ]
     return colors[index % colors.length]
   }
+
+  const pageSize = selectedFiscalYear === 'all' ? 50 : 10
+  const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / pageSize))
+  const safePage = Math.min(currentPage, totalPages)
+  const startIndex = (safePage - 1) * pageSize
+  const paginatedExpenses = filteredExpenses.slice(startIndex, startIndex + pageSize)
+  const showingFrom = filteredExpenses.length === 0 ? 0 : startIndex + 1
+  const showingTo = Math.min(startIndex + pageSize, filteredExpenses.length)
 
   return (
     <div className="space-y-6">
@@ -440,9 +453,10 @@ export function ExpensesTab({
           </p>
         ) : (
           <div className="space-y-3">
-            {filteredExpenses
-              .slice(0, selectedFiscalYear === 'all' ? 50 : 10)
-              .map((expense) => (
+            <div className="text-sm text-gray-600">
+              Showing {showingFrom}-{showingTo} of {filteredExpenses.length} expenses
+            </div>
+            {paginatedExpenses.map((expense) => (
                 <div
                   key={expense.id}
                   className="border-l-4 border-blue-500 pl-4 py-3"
@@ -467,6 +481,27 @@ export function ExpensesTab({
                   </div>
                 </div>
               ))}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={safePage === 1}
+                  className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {safePage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={safePage === totalPages}
+                  className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

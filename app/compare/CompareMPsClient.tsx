@@ -194,6 +194,7 @@ export function CompareMPsClient() {
                       alt={mp.fullName}
                       width={32}
                       height={32}
+                      sizes="32px"
                       className="rounded-full object-cover"
                     />
                   )}
@@ -341,6 +342,7 @@ export function CompareMPsClient() {
                               alt={data.mp.fullName}
                               width={40}
                               height={40}
+                              sizes="40px"
                               className="rounded-full object-cover"
                             />
                           )}
@@ -532,6 +534,7 @@ function MPSelector({
                   alt={mp.fullName}
                   width={40}
                   height={40}
+                  sizes="40px"
                   className="rounded-full object-cover"
                 />
               )}

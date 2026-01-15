@@ -143,6 +143,36 @@ export const emailSubscriptions = pgTable('email_subscriptions', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+// Weekly digest tracking table - prevents duplicate emails on job retry
+// Unique constraint on (userId, weekIdentifier) is created in migration 0005
+export const weeklyDigestSent = pgTable('weekly_digest_sent', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id', { length: 255 }).references(() => users.id).notNull(),
+  weekIdentifier: varchar('week_identifier', { length: 20 }).notNull(), // Format: YYYY-WW (e.g., "2025-01")
+  jobId: varchar('job_id', { length: 100 }), // Graphile Worker job ID
+  resendId: varchar('resend_id', { length: 100 }), // Resend email ID
+  deliveryStatus: varchar('delivery_status', { length: 50 }), // 'sent', 'delivered', 'bounced', 'complained'
+  deliveredAt: timestamp('delivered_at'),
+  bouncedAt: timestamp('bounced_at'),
+  sentAt: timestamp('sent_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// Email delivery events - records delivery/bounce webhooks from Resend
+export const emailDeliveryEvents = pgTable('email_delivery_events', {
+  id: serial('id').primaryKey(),
+  eventId: varchar('event_id', { length: 100 }).notNull(),
+  eventType: varchar('event_type', { length: 100 }).notNull(), // 'email.sent', 'email.delivered', 'email.bounced', etc.
+  resendId: varchar('resend_id', { length: 100 }),
+  userId: varchar('user_id', { length: 255 }).references(() => users.id),
+  email: varchar('email', { length: 255 }),
+  status: varchar('status', { length: 50 }),
+  payload: jsonb('payload'),
+  receivedAt: timestamp('received_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 // Scraper anomalies table - tracks data validation issues flagged by scrapers
 export const scraperAnomalies = pgTable('scraper_anomalies', {
   id: serial('id').primaryKey(),
@@ -214,6 +244,7 @@ export const calculatedScoresRelations = relations(calculatedScores, ({ one }) =
 
 export const usersRelations = relations(users, ({ many }) => ({
   emailSubscriptions: many(emailSubscriptions),
+  emailDeliveryEvents: many(emailDeliveryEvents),
 }))
 
 export const emailSubscriptionsRelations = relations(emailSubscriptions, ({ one }) => ({
@@ -224,6 +255,13 @@ export const emailSubscriptionsRelations = relations(emailSubscriptions, ({ one 
   mp: one(mps, {
     fields: [emailSubscriptions.mpId],
     references: [mps.id],
+  }),
+}))
+
+export const emailDeliveryEventsRelations = relations(emailDeliveryEvents, ({ one }) => ({
+  user: one(users, {
+    fields: [emailDeliveryEvents.userId],
+    references: [users.id],
   }),
 }))
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { CSVExportButton } from '@/components/ui/CSVExportButton'
 
@@ -28,6 +28,8 @@ const CURRENT_PARLIAMENT_PREFIX = '45-'
 export function VotingRecordTab({ mpId, slug, votes, isPremium }: VotingRecordTabProps) {
   const [voteTypeFilter, setVoteTypeFilter] = useState<VoteTypeFilter>('all')
   const [dateRangeFilter, setDateRangeFilter] = useState<'all' | '30' | '90' | '365'>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20
 
   // Filter votes based on selected filters
   const filteredVotes = useMemo(() => {
@@ -51,6 +53,10 @@ export function VotingRecordTab({ mpId, slug, votes, isPremium }: VotingRecordTa
 
     return filtered
   }, [votes, voteTypeFilter, dateRangeFilter])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [voteTypeFilter, dateRangeFilter])
 
   const getVoteColor = (voteResult: string) => {
     switch (voteResult) {
@@ -120,6 +126,13 @@ export function VotingRecordTab({ mpId, slug, votes, isPremium }: VotingRecordTa
 
   // Count current parliament votes (server already filters for free users, but we still count for display)
   const currentParliamentVotes = votes.filter((vote) => vote.session.startsWith(CURRENT_PARLIAMENT_PREFIX))
+
+  const totalPages = Math.max(1, Math.ceil(filteredVotes.length / pageSize))
+  const safePage = Math.min(currentPage, totalPages)
+  const startIndex = (safePage - 1) * pageSize
+  const paginatedVotes = filteredVotes.slice(startIndex, startIndex + pageSize)
+  const showingFrom = filteredVotes.length === 0 ? 0 : startIndex + 1
+  const showingTo = Math.min(startIndex + pageSize, filteredVotes.length)
 
   return (
     <div className="space-y-6">
@@ -277,7 +290,7 @@ export function VotingRecordTab({ mpId, slug, votes, isPremium }: VotingRecordTa
 
         {/* Results Count */}
         <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredVotes.length} of {dateFilteredVotes.length} votes
+          Showing {showingFrom}-{showingTo} of {filteredVotes.length} votes
           {!isPremium && (
             <span className="text-gray-500 ml-1">
               (current parliament only)
@@ -294,7 +307,7 @@ export function VotingRecordTab({ mpId, slug, votes, isPremium }: VotingRecordTa
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredVotes.map((vote) => {
+            {paginatedVotes.map((vote) => {
               const colors = getVoteColor(vote.voteResult)
               const parlCaUrl = getParlCaUrl(vote.billNumber)
               const voteDate = new Date(vote.date)
@@ -372,6 +385,27 @@ export function VotingRecordTab({ mpId, slug, votes, isPremium }: VotingRecordTa
                 </div>
               )
             })}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={safePage === 1}
+                  className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {safePage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={safePage === totalPages}
+                  className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

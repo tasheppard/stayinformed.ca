@@ -5,21 +5,27 @@ import { mps } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import Image from 'next/image'
 import { MPProfileTabsWrapper } from './components/MPProfileTabsWrapper'
+import { unstable_cache } from 'next/cache'
 
 interface PageProps {
   params: Promise<{ slug: string }>
 }
+
+const getMpBySlug = (slug: string) =>
+  unstable_cache(
+    async () => {
+      return db.select().from(mps).where(eq(mps.slug, slug)).limit(1)
+    },
+    ['mp-profile', slug],
+    { revalidate: 60 * 60, tags: ['mp-profile', `mp-profile:${slug}`] }
+  )()
 
 // Generate metadata for SEO
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params
-  const mpResults = await db
-    .select()
-    .from(mps)
-    .where(eq(mps.slug, slug))
-    .limit(1)
+  const mpResults = await getMpBySlug(slug)
 
   if (mpResults.length === 0) {
     return {
@@ -52,11 +58,7 @@ export default async function MPProfilePage({ params }: PageProps) {
   const { slug } = await params
 
   // Fetch MP data
-  const mpResults = await db
-    .select()
-    .from(mps)
-    .where(eq(mps.slug, slug))
-    .limit(1)
+  const mpResults = await getMpBySlug(slug)
 
   if (mpResults.length === 0) {
     notFound()
@@ -78,6 +80,7 @@ export default async function MPProfilePage({ params }: PageProps) {
                   alt={mp.fullName}
                   width={120}
                   height={120}
+                  sizes="120px"
                   className="rounded-lg object-cover border-2 border-gray-200"
                   priority
                 />

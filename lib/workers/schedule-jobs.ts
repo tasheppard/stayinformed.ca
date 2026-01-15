@@ -20,7 +20,7 @@ if (!process.env.DATABASE_URL) {
  * @param date The date to check (defaults to current date)
  * @returns The timezone offset in hours (-4 for EDT, -5 for EST)
  */
-function getEasternTimeOffset(date: Date = new Date()): number {
+export function getEasternTimeOffset(date: Date = new Date()): number {
   // Check if timezone offset is explicitly configured
   const configuredOffset = process.env.TIMEZONE_OFFSET
   if (configuredOffset) {
@@ -66,6 +66,112 @@ function getEasternTimeOffset(date: Date = new Date()): number {
   }
   
   return -5 // EST (UTC-5)
+}
+
+/**
+ * Calculate next Friday at specified time (Eastern Time)
+ * Used for weekly jobs that run on Fridays
+ * 
+ * @param hour Hour in 24-hour format (0-23)
+ * @param minute Minute (0-59)
+ * @param timezoneOffset Optional timezone offset (defaults to Eastern Time)
+ * @returns Date object representing next Friday at the specified time in UTC
+ */
+function getNextFriday(hour: number, minute: number, timezoneOffset?: number): Date {
+  const now = new Date()
+  const offset = timezoneOffset ?? getEasternTimeOffset()
+  
+  // Get UTC date components
+  const utcYear = now.getUTCFullYear()
+  const utcMonth = now.getUTCMonth()
+  const utcDay = now.getUTCDate()
+  const utcHour = now.getUTCHours()
+  const utcMinute = now.getUTCMinutes()
+  
+  // Convert to Eastern Time by adjusting the hour
+  // Offset is negative (EST = -5, EDT = -4), so we add it to get Eastern Time
+  let easternHour = utcHour + offset
+  let easternDay = utcDay
+  let easternMonth = utcMonth
+  let easternYear = utcYear
+  
+  // Handle day rollover when adjusting for timezone
+  if (easternHour < 0) {
+    easternHour += 24
+    easternDay--
+    if (easternDay < 1) {
+      easternMonth--
+      if (easternMonth < 0) {
+        easternMonth = 11
+        easternYear--
+      }
+      // Get days in previous month
+      const daysInPrevMonth = new Date(Date.UTC(easternYear, easternMonth + 1, 0)).getUTCDate()
+      easternDay = daysInPrevMonth
+    }
+  } else if (easternHour >= 24) {
+    easternHour -= 24
+    easternDay++
+    const daysInMonth = new Date(Date.UTC(easternYear, easternMonth + 1, 0)).getUTCDate()
+    if (easternDay > daysInMonth) {
+      easternDay = 1
+      easternMonth++
+      if (easternMonth > 11) {
+        easternMonth = 0
+        easternYear++
+      }
+    }
+  }
+  
+  // Get day of week for Eastern Time date
+  // Create a UTC date representing the Eastern Time date at noon (to avoid DST edge cases)
+  const easternDate = new Date(Date.UTC(easternYear, easternMonth, easternDay, 12, 0, 0, 0))
+  const currentDay = easternDate.getUTCDay()
+  
+  // Calculate days until next Friday
+  let daysUntilFriday: number
+  if (currentDay === 5) {
+    // Today is Friday - check if scheduled time has passed
+    const scheduledTime = hour * 60 + minute
+    const currentTime = easternHour * 60 + utcMinute
+    
+    if (currentTime < scheduledTime) {
+      // Scheduled time hasn't passed today - use today
+      daysUntilFriday = 0
+    } else {
+      // Scheduled time has passed - use next Friday (7 days)
+      daysUntilFriday = 7
+    }
+  } else if (currentDay < 5) {
+    // Before Friday - days until Friday
+    daysUntilFriday = 5 - currentDay
+  } else {
+    // After Friday (Saturday) - days until next Friday
+    daysUntilFriday = 7 - (currentDay - 5)
+  }
+  
+  // Calculate target date in Eastern Time
+  const targetEasternDate = new Date(Date.UTC(easternYear, easternMonth, easternDay, 12, 0, 0, 0))
+  targetEasternDate.setUTCDate(targetEasternDate.getUTCDate() + daysUntilFriday)
+  
+  const targetYear = targetEasternDate.getUTCFullYear()
+  const targetMonth = targetEasternDate.getUTCMonth()
+  const targetDay = targetEasternDate.getUTCDate()
+  
+  // Get offset for target date (in case DST changes)
+  const targetDate = new Date(Date.UTC(targetYear, targetMonth, targetDay, 12, 0, 0, 0))
+  const targetOffset = timezoneOffset ?? getEasternTimeOffset(targetDate)
+  
+  // Create scheduled time in Eastern Time
+  const targetLocalMidnight = new Date(Date.UTC(targetYear, targetMonth, targetDay, 0, 0, 0, 0))
+  const targetLocalScheduled = new Date(
+    targetLocalMidnight.getTime() + (hour * 60 * 60 * 1000) + (minute * 60 * 1000)
+  )
+  
+  // Convert Eastern Time to UTC
+  const targetUtc = new Date(targetLocalScheduled.getTime() - (targetOffset * 60 * 60 * 1000))
+  
+  return targetUtc
 }
 
 /**
@@ -236,6 +342,37 @@ export async function scheduleJobs(): Promise<void> {
 
     console.log(`✅ Scheduled recalculateScores job (key: recalculate-scores-daily)`)
     console.log(`   Next run: ${scoresNextRun.toISOString()} (${scoresSchedule} ${timezoneLabel})`)
+
+    // Schedule weekly digest job (Fridays @ 9 AM EST)
+    const weeklyDigestSchedule = process.env.WEEKLY_DIGEST_SCHEDULE || '09 00' // 9 AM Eastern Time
+    const weeklyDigestParts = weeklyDigestSchedule.trim().split(/\s+/)
+    if (weeklyDigestParts.length < 2) {
+      throw new Error(`Invalid weekly digest schedule format: ${weeklyDigestSchedule}. Expected "HH MM" (24-hour format)`)
+    }
+    const weeklyDigestHour = parseInt(weeklyDigestParts[0], 10)
+    const weeklyDigestMinute = parseInt(weeklyDigestParts[1], 10)
+    
+    if (isNaN(weeklyDigestHour) || weeklyDigestHour < 0 || weeklyDigestHour > 23) {
+      throw new Error(`Invalid hour in weekly digest schedule: ${weeklyDigestHour}`)
+    }
+    if (isNaN(weeklyDigestMinute) || weeklyDigestMinute < 0 || weeklyDigestMinute > 59) {
+      throw new Error(`Invalid minute in weekly digest schedule: ${weeklyDigestMinute}`)
+    }
+
+    const weeklyDigestNextRun = getNextFriday(weeklyDigestHour, weeklyDigestMinute)
+
+    await runner.addJob(
+      'sendWeeklyDigests',
+      {},
+      {
+        jobKey: 'send-weekly-digests-weekly',
+        jobKeyMode: 'replace',
+        runAt: weeklyDigestNextRun,
+      }
+    )
+
+    console.log(`✅ Scheduled sendWeeklyDigests job (key: send-weekly-digests-weekly)`)
+    console.log(`   Next run: ${weeklyDigestNextRun.toISOString()} (Fridays at ${weeklyDigestSchedule} ${timezoneLabel})`)
     console.log('')
     console.log('ℹ️  Note: For production, this script should be called by:')
     console.log('   - System cron (daily)')

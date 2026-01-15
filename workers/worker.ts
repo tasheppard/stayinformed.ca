@@ -1,6 +1,13 @@
 import { run } from 'graphile-worker'
 import * as dotenv from 'dotenv'
-import { taskList } from './scraper-jobs'
+import { taskList as scraperTaskList } from './scraper-jobs'
+import { taskList as emailTaskList } from './email-jobs'
+
+// Merge task lists
+const taskList = {
+  ...scraperTaskList,
+  ...emailTaskList,
+}
 
 // Load environment variables
 dotenv.config({ path: '.env.local' })
