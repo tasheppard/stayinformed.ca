@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { unstable_cache } from 'next/cache'
 import { findMPByCoordinates, postalCodeToCoordinates } from '@/lib/utils/geolocation'
 
 /**
@@ -17,6 +18,34 @@ export async function GET(request: NextRequest) {
     const lat = searchParams.get('lat')
     const lng = searchParams.get('lng')
     const postalCode = searchParams.get('postalCode')
+    const cacheTtlSeconds = 60 * 60 * 24 * 7
+
+    const getCoordinatesByPostalCode = (code: string) =>
+      unstable_cache(
+        async () => {
+          return postalCodeToCoordinates(code)
+        },
+        ['geolocation', 'postal', code.toLowerCase()],
+        {
+          revalidate: cacheTtlSeconds,
+          tags: ['geolocation', `geolocation:postal:${code.toLowerCase()}`],
+        }
+      )()
+
+    const getMpByCoordinates = (latitude: number, longitude: number) =>
+      unstable_cache(
+        async () => {
+          return findMPByCoordinates(latitude, longitude)
+        },
+        ['geolocation', 'coords', String(latitude), String(longitude)],
+        {
+          revalidate: cacheTtlSeconds,
+          tags: [
+            'geolocation',
+            `geolocation:coords:${latitude},${longitude}`,
+          ],
+        }
+      )()
 
     // Validate input - must have either lat/lng or postalCode
     if (!postalCode && (!lat || !lng)) {
@@ -32,7 +61,7 @@ export async function GET(request: NextRequest) {
     // If postal code provided, convert to coordinates
     if (postalCode) {
       try {
-        const coords = await postalCodeToCoordinates(postalCode)
+        const coords = await getCoordinatesByPostalCode(postalCode)
         latitude = coords.latitude
         longitude = coords.longitude
       } catch (error) {
@@ -60,7 +89,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Find MP by coordinates
-    const result = await findMPByCoordinates(latitude, longitude)
+    const result = await getMpByCoordinates(latitude, longitude)
 
     if (!result) {
       return NextResponse.json(

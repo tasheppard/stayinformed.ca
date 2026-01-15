@@ -46,6 +46,7 @@ export function MPCard({
               alt={fullName}
               width={64}
               height={64}
+              sizes="64px"
               className="rounded-lg object-cover border border-gray-200"
             />
           ) : (

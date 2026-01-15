@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import Link from 'next/link'
+import { CSVExportButton } from '@/components/ui/CSVExportButton'
 
 interface Vote {
   id: number
@@ -16,13 +18,18 @@ interface VotingRecordTabProps {
   mpId: number
   slug: string
   votes: Vote[]
+  isPremium: boolean
 }
 
 type VoteTypeFilter = 'all' | 'Yea' | 'Nay' | 'Paired' | 'Abstained'
 
-export function VotingRecordTab({ mpId, slug, votes }: VotingRecordTabProps) {
+const CURRENT_PARLIAMENT_PREFIX = '45-'
+
+export function VotingRecordTab({ mpId, slug, votes, isPremium }: VotingRecordTabProps) {
   const [voteTypeFilter, setVoteTypeFilter] = useState<VoteTypeFilter>('all')
   const [dateRangeFilter, setDateRangeFilter] = useState<'all' | '30' | '90' | '365'>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20
 
   // Filter votes based on selected filters
   const filteredVotes = useMemo(() => {
@@ -46,6 +53,10 @@ export function VotingRecordTab({ mpId, slug, votes }: VotingRecordTabProps) {
 
     return filtered
   }, [votes, voteTypeFilter, dateRangeFilter])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [voteTypeFilter, dateRangeFilter])
 
   const getVoteColor = (voteResult: string) => {
     switch (voteResult) {
@@ -88,22 +99,84 @@ export function VotingRecordTab({ mpId, slug, votes }: VotingRecordTabProps) {
     return `https://www.parl.ca/LegisInfo/BillDetails.aspx?billId=${encodeURIComponent(billNumber)}`
   }
 
-  // Count votes by type
+  // Get votes filtered by date range only (for count display)
+  const dateFilteredVotes = useMemo(() => {
+    if (dateRangeFilter === 'all') {
+      return votes
+    }
+    const daysAgo = parseInt(dateRangeFilter)
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - daysAgo)
+    return votes.filter((vote) => {
+      const voteDate = new Date(vote.date)
+      return voteDate >= cutoffDate
+    })
+  }, [votes, dateRangeFilter])
+
+  // Count votes by type (within the selected date range)
   const voteCounts = useMemo(() => {
     return {
-      all: votes.length,
-      Yea: votes.filter((v) => v.voteResult === 'Yea').length,
-      Nay: votes.filter((v) => v.voteResult === 'Nay').length,
-      Abstained: votes.filter((v) => v.voteResult === 'Abstained').length,
-      Paired: votes.filter((v) => v.voteResult === 'Paired').length,
+      all: dateFilteredVotes.length,
+      Yea: dateFilteredVotes.filter((v) => v.voteResult === 'Yea').length,
+      Nay: dateFilteredVotes.filter((v) => v.voteResult === 'Nay').length,
+      Abstained: dateFilteredVotes.filter((v) => v.voteResult === 'Abstained').length,
+      Paired: dateFilteredVotes.filter((v) => v.voteResult === 'Paired').length,
     }
-  }, [votes])
+  }, [dateFilteredVotes])
+
+  // Count current parliament votes (server already filters for free users, but we still count for display)
+  const currentParliamentVotes = votes.filter((vote) => vote.session.startsWith(CURRENT_PARLIAMENT_PREFIX))
+
+  const totalPages = Math.max(1, Math.ceil(filteredVotes.length / pageSize))
+  const safePage = Math.min(currentPage, totalPages)
+  const startIndex = (safePage - 1) * pageSize
+  const paginatedVotes = filteredVotes.slice(startIndex, startIndex + pageSize)
+  const showingFrom = filteredVotes.length === 0 ? 0 : startIndex + 1
+  const showingTo = Math.min(startIndex + pageSize, filteredVotes.length)
 
   return (
     <div className="space-y-6">
+      {/* Historical Data Notice for Free Users */}
+      {!isPremium && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg
+                className="w-5 h-5 text-blue-600 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-gray-700 mb-3">
+                You're viewing votes from the current parliament (45th) only. 
+                <span className="font-medium"> Upgrade to Premium</span> to access historical voting records from past parliaments.
+              </p>
+              <Link
+                href="/subscribe"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              >
+                Upgrade to Premium →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">Voting Record</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Voting Record</h2>
+          <CSVExportButton slug={slug} exportType="votes" />
+        </div>
 
         {/* Vote Type Filter */}
         <div className="mb-4">
@@ -217,7 +290,12 @@ export function VotingRecordTab({ mpId, slug, votes }: VotingRecordTabProps) {
 
         {/* Results Count */}
         <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredVotes.length} of {votes.length} votes
+          Showing {showingFrom}-{showingTo} of {filteredVotes.length} votes
+          {!isPremium && (
+            <span className="text-gray-500 ml-1">
+              (current parliament only)
+            </span>
+          )}
         </div>
       </div>
 
@@ -229,7 +307,7 @@ export function VotingRecordTab({ mpId, slug, votes }: VotingRecordTabProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredVotes.map((vote) => {
+            {paginatedVotes.map((vote) => {
               const colors = getVoteColor(vote.voteResult)
               const parlCaUrl = getParlCaUrl(vote.billNumber)
               const voteDate = new Date(vote.date)
@@ -307,6 +385,27 @@ export function VotingRecordTab({ mpId, slug, votes }: VotingRecordTabProps) {
                 </div>
               )
             })}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={safePage === 1}
+                  className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {safePage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={safePage === totalPages}
+                  className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

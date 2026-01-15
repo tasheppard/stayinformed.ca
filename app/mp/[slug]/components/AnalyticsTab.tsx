@@ -1,12 +1,15 @@
 'use client'
 
 import { useMemo } from 'react'
-import { LineChart, BarChart } from '@tremor/react'
+import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import { CSVExportButton } from '@/components/ui/CSVExportButton'
 
 interface Vote {
   id: number
   date: Date | string
   voteResult: string
+  session?: string
 }
 
 interface Bill {
@@ -49,7 +52,30 @@ interface AnalyticsTabProps {
   committees: Committee[]
   partyAverages?: ComparisonStats | null
   nationalAverages?: ComparisonStats
+  isPremium: boolean
 }
+
+const CURRENT_PARLIAMENT_START_DATE = new Date('2021-09-20')
+
+const LineChart = dynamic(
+  () => import('@tremor/react').then((mod) => mod.LineChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 w-full animate-pulse rounded-lg bg-gray-100" />
+    ),
+  }
+)
+
+const BarChart = dynamic(
+  () => import('@tremor/react').then((mod) => mod.BarChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 w-full animate-pulse rounded-lg bg-gray-100" />
+    ),
+  }
+)
 
 export function AnalyticsTab({
   mpId,
@@ -60,7 +86,12 @@ export function AnalyticsTab({
   committees,
   partyAverages,
   nationalAverages,
+  isPremium,
 }: AnalyticsTabProps) {
+  // Note: Data is already filtered server-side by parliament/session for free users
+  // Votes are filtered by session (LIKE '45-%'), bills and petitions by date (>= 2021-09-20)
+  // No client-side filtering needed to avoid conflicts
+
   // Calculate voting participation rate over time (monthly)
   const votingParticipationData = useMemo(() => {
     // Group votes by month
@@ -124,6 +155,41 @@ export function AnalyticsTab({
 
   return (
     <div className="space-y-6">
+      {/* Historical Data Notice for Free Users */}
+      {!isPremium && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg
+                className="w-5 h-5 text-blue-600 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-gray-700 mb-3">
+                Analytics shown are for the current parliament (45th) only. 
+                <span className="font-medium"> Upgrade to Premium</span> to view historical data from past parliaments.
+              </p>
+              <Link
+                href="/subscribe"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              >
+                Upgrade to Premium →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-4">
@@ -341,12 +407,15 @@ export function AnalyticsTab({
 
       {/* Bills Sponsored */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          Bills Sponsored ({bills.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            Bills Sponsored ({bills.length})
+          </h2>
+          <CSVExportButton slug={slug} exportType="bills" />
+        </div>
         {bills.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
-            No bills sponsored yet.
+            No bills sponsored yet{!isPremium ? ' in the current parliament' : ''}.
           </p>
         ) : (
           <div className="space-y-3">
@@ -411,6 +480,11 @@ export function AnalyticsTab({
             {bills.length > 10 && (
               <p className="text-sm text-gray-500 text-center pt-2">
                 Showing 10 of {bills.length} bills
+                {!isPremium && (
+                  <span className="ml-1">
+                    (current parliament only)
+                  </span>
+                )}
               </p>
             )}
           </div>
@@ -419,12 +493,15 @@ export function AnalyticsTab({
 
       {/* Petitions Sponsored */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          Petitions Sponsored ({petitions.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            Petitions Sponsored ({petitions.length})
+          </h2>
+          <CSVExportButton slug={slug} exportType="petitions" />
+        </div>
         {petitions.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
-            No petitions sponsored yet.
+            No petitions sponsored yet{!isPremium ? ' in the current parliament' : ''}.
           </p>
         ) : (
           <div className="space-y-3">
@@ -491,6 +568,11 @@ export function AnalyticsTab({
             {petitions.length > 10 && (
               <p className="text-sm text-gray-500 text-center pt-2">
                 Showing 10 of {petitions.length} petitions
+                {!isPremium && (
+                  <span className="ml-1">
+                    (current parliament only)
+                  </span>
+                )}
               </p>
             )}
           </div>
@@ -499,9 +581,12 @@ export function AnalyticsTab({
 
       {/* Committee Participation */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          Committee Participation ({committees.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            Committee Participation ({committees.length})
+          </h2>
+          <CSVExportButton slug={slug} exportType="committees" />
+        </div>
         {committees.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
             No committee participation recorded.

@@ -36,6 +36,12 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "lib/db/check-*.ts",
+    "lib/db/convert-*.ts",
+    "lib/db/find-*.ts",
+    "lib/db/import-*.ts",
+    "lib/db/import-*.py",
+    "scripts/**/*"
   ]
 }

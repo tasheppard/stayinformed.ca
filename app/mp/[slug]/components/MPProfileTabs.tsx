@@ -32,6 +32,7 @@ interface MPProfileTabsProps {
   nationalAverage?: number
   partyAverages?: ComparisonStats | null
   nationalAverages?: ComparisonStats
+  isPremium: boolean
 }
 
 export function MPProfileTabs({
@@ -52,6 +53,7 @@ export function MPProfileTabs({
   nationalAverage,
   partyAverages,
   nationalAverages,
+  isPremium,
 }: MPProfileTabsProps) {
   return (
     <Tabs.Root defaultValue="overview" className="w-full">
@@ -146,7 +148,7 @@ export function MPProfileTabs({
         value="voting-record"
         className="focus:outline-none mb-16 md:mb-0"
       >
-        <VotingRecordTab mpId={mpId} slug={slug} votes={votes} />
+        <VotingRecordTab mpId={mpId} slug={slug} votes={votes} isPremium={isPremium} />
       </Tabs.Content>
 
       <Tabs.Content
@@ -159,6 +161,7 @@ export function MPProfileTabs({
           expenses={expenses}
           partyAverage={partyAverage}
           nationalAverage={nationalAverage}
+          isPremium={isPremium}
         />
       </Tabs.Content>
 
@@ -175,6 +178,7 @@ export function MPProfileTabs({
           committees={committees}
           partyAverages={partyAverages}
           nationalAverages={nationalAverages}
+          isPremium={isPremium}
         />
       </Tabs.Content>
     </Tabs.Root>

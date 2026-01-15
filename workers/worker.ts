@@ -1,58 +1,66 @@
-#!/usr/bin/env node
-
 import { run } from 'graphile-worker'
 import * as dotenv from 'dotenv'
-import { taskList } from './scraper-jobs'
-import * as Sentry from '@sentry/node'
+import { taskList as scraperTaskList } from './scraper-jobs'
+import { taskList as emailTaskList } from './email-jobs'
+
+// Merge task lists
+const taskList = {
+  ...scraperTaskList,
+  ...emailTaskList,
+}
 
 // Load environment variables
 dotenv.config({ path: '.env.local' })
 
-// Initialize Sentry if SENTRY_DSN is set
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'development',
-    tracesSampleRate: 1.0,
-  })
-}
-
 if (!process.env.DATABASE_URL) {
-  console.error('❌ DATABASE_URL environment variable is not set')
-  process.exit(1)
+  throw new Error('DATABASE_URL environment variable is not set')
 }
 
-async function main() {
-  console.log('🚀 Starting Graphile Worker...')
+/**
+ * Start Graphile Worker to process scheduled jobs
+ * This should run as a long-running process (e.g., on Railway)
+ */
+async function startWorker() {
+  console.log('Starting Graphile Worker...')
+  console.log('Registered tasks:', Object.keys(taskList).join(', '))
 
   const runner = await run({
     connectionString: process.env.DATABASE_URL!,
-    concurrency: 5, // Run up to 5 jobs concurrently
-    pollInterval: 1000, // Poll every second
+    concurrency: parseInt(process.env.WORKER_CONCURRENCY || '1', 10),
+    noHandleSignals: true, // Disable Graphile Worker's signal handlers - we handle them ourselves
+    pollInterval: 1000,
     taskList,
-    noHandleSignals: false, // Allow graceful shutdown
   })
 
-  console.log('✅ Graphile Worker started successfully')
-  console.log('📋 Registered tasks:', Object.keys(taskList).join(', '))
+  console.log('✅ Graphile Worker started and ready to process jobs')
+  console.log('Press Ctrl+C to stop')
 
-  // Graceful shutdown
-  process.on('SIGINT', async () => {
-    console.log('\n🛑 Shutting down Graphile Worker...')
-    await runner.stop()
+  // Handle graceful shutdown
+  process.on('SIGTERM', async () => {
+    console.log('Received SIGTERM, shutting down gracefully...')
+    try {
+      await runner.stop()
+    } catch (error) {
+      console.error('Error stopping runner:', error)
+    }
     process.exit(0)
   })
 
-  process.on('SIGTERM', async () => {
-    console.log('\n🛑 Shutting down Graphile Worker...')
-    await runner.stop()
+  process.on('SIGINT', async () => {
+    console.log('Received SIGINT, shutting down gracefully...')
+    try {
+      await runner.stop()
+    } catch (error) {
+      console.error('Error stopping runner:', error)
+    }
     process.exit(0)
   })
 }
 
-main().catch((error) => {
-  console.error('❌ Failed to start Graphile Worker:', error)
-  Sentry.captureException(error)
-  process.exit(1)
-})
-
+// Start worker if called directly
+if (require.main === module) {
+  startWorker().catch((error) => {
+    console.error('Failed to start worker:', error)
+    process.exit(1)
+  })
+}

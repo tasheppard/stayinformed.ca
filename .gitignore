@@ -7,6 +7,9 @@
 
 # testing
 /coverage
+# Prevent jest.config.js from being created (we use jest.config.cjs for ESM projects)
+# If jest.config.js is accidentally committed, remove it with: git rm --cached jest.config.js
+jest.config.js
 
 # next.js
 /.next/
@@ -46,8 +49,6 @@ data/geojson/*
 # private/internal files (keeping private for now)
 docs/
 tasks/
-lib/scrapers/
-lib/utils/comparisons.ts
 .cursor/rules
 
 # API keys and secrets (ensure these are never committed)

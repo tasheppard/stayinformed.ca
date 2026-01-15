@@ -5,7 +5,11 @@ import { users } from '../../lib/db/schema'
 import { eq } from 'drizzle-orm'
 import AccountSettingsClient from './AccountSettingsClient'
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: { session_id?: string }
+}) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -36,6 +40,7 @@ export default async function AccountPage() {
               user={user}
               userData={userData}
               supabaseUrl={process.env.NEXT_PUBLIC_SUPABASE_URL!}
+              sessionId={searchParams.session_id}
             />
           </div>
         </div>
