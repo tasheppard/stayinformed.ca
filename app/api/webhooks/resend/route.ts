@@ -9,10 +9,18 @@ import {
 } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
+type VerifiedResendWebhookEvent = ReturnType<typeof resend.webhooks.verify>
+
 type ResendWebhookEvent = {
   id: string
   type: string
   data?: Record<string, unknown>
+}
+
+function isResendWebhookEvent(event: unknown): event is ResendWebhookEvent {
+  if (!event || typeof event !== 'object') return false
+  const maybeEvent = event as Record<string, unknown>
+  return typeof maybeEvent.id === 'string' && typeof maybeEvent.type === 'string'
 }
 
 function getResendEmailId(data: Record<string, unknown> | undefined): string | null {
@@ -74,7 +82,11 @@ export async function POST(request: NextRequest) {
       },
       webhookSecret,
     })
-    event = verified as ResendWebhookEvent
+    if (!isResendWebhookEvent(verified)) {
+      console.warn('Unhandled Resend webhook event payload')
+      return NextResponse.json({ received: true })
+    }
+    event = verified
   } catch (error) {
     console.error('Resend webhook signature verification failed:', error)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
