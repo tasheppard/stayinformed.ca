@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm'
 import Image from 'next/image'
 import { MPProfileTabsWrapper } from './components/MPProfileTabsWrapper'
 import { unstable_cache } from 'next/cache'
+import { getBaseUrl } from '@/lib/utils/site-url'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -26,6 +27,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const mpResults = await getMpBySlug(slug)
+  const baseUrl = getBaseUrl()
 
   if (mpResults.length === 0) {
     return {
@@ -36,14 +38,26 @@ export async function generateMetadata({
   const mp = mpResults[0]
   const title = `${mp.fullName} - MP Profile | StayInformed.ca`
   const description = `Track ${mp.fullName}'s performance, voting records, expenses, and accountability scores. Representing ${mp.constituencyName}, ${mp.province}.`
+  const canonicalUrl = `${baseUrl}/mp/${mp.slug}`
 
   return {
     title,
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title,
       description,
       type: 'profile',
+      url: canonicalUrl,
+      images: mp.photoUrl ? [{ url: mp.photoUrl, alt: mp.fullName }] : undefined,
+    },
+    twitter: {
+      card: mp.photoUrl ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      images: mp.photoUrl ? [mp.photoUrl] : undefined,
     },
   }
 }
@@ -65,9 +79,36 @@ export default async function MPProfilePage({ params }: PageProps) {
   }
 
   const mp = mpResults[0]
+  const baseUrl = getBaseUrl()
+  const mpUrl = `${baseUrl}/mp/${mp.slug}`
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: mp.fullName,
+    url: mpUrl,
+    image: mp.photoUrl ?? undefined,
+    email: mp.email ?? undefined,
+    telephone: mp.phone ?? undefined,
+    jobTitle: 'Member of Parliament',
+    worksFor: {
+      '@type': 'Organization',
+      name: 'House of Commons of Canada',
+    },
+    memberOf: mp.caucusShortName
+      ? {
+          '@type': 'Organization',
+          name: mp.caucusShortName,
+        }
+      : undefined,
+    areaServed: `${mp.constituencyName}, ${mp.province}`,
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header Section */}
       <div className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-4 py-6 md:py-8">

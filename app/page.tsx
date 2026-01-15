@@ -1,6 +1,22 @@
+import type { Metadata } from 'next'
 import { UseMyLocationButton } from '@/components/search/UseMyLocationButton'
 import { PostalCodeSearch } from '@/components/search/PostalCodeSearch'
 import { MPSearchDropdown } from '@/components/search/MPSearchDropdown'
+
+export const metadata: Metadata = {
+  title: 'Find Your MP | StayInformed.ca',
+  description:
+    'Find your Canadian MP by location, postal code, or name. Track voting records, expenses, and accountability scores.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'Find Your MP | StayInformed.ca',
+    description:
+      'Find your Canadian MP by location, postal code, or name. Track voting records, expenses, and accountability scores.',
+    type: 'website',
+  },
+}
 
 export default function Home() {
   return (
@@ -9,10 +25,10 @@ export default function Home() {
         <div className="max-w-2xl mx-auto text-center">
           {/* Hero Section */}
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            StayInformed.ca
+            Find Your MP
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 mb-12">
-            The easiest way for Canadians to track their MP&apos;s performance
+            StayInformed.ca helps Canadians track their MP&apos;s performance
           </p>
 
           {/* Search Options */}
